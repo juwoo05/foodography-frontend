@@ -1,0 +1,637 @@
+/* ── 배경 ── */
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #0D1117;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  position: relative;
+}
+
+.body::before {
+  content: '';
+  position: fixed;
+  top: -200px; left: 50%;
+  transform: translateX(-50%);
+  width: 600px; height: 500px;
+  background: radial-gradient(ellipse, rgba(46,204,113,0.07) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── 카드 ── */
+.card {
+  width: 100%;
+  max-width: 420px;
+  background: #161B22;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 18px;
+  padding: 40px 36px 36px;
+  position: relative;
+  z-index: 1;
+  animation: cardIn 0.38s cubic-bezier(0.34, 1.2, 0.64, 1);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(18px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── 로고 ── */
+.logoWrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 28px;
+}
+.logoEmoji { font-size: 28px; line-height: 1; }
+.logoText {
+  font-family: 'Jua', sans-serif;
+  font-size: 26px;
+  font-weight: 400;
+  color: #2ECC71;
+  letter-spacing: -0.01em;
+}
+
+/* ── 타이틀 ── */
+.title {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #E6EDF3;
+  text-align: center;
+  margin-bottom: 6px;
+}
+.sub {
+  font-size: 13px;
+  color: #8B949E;
+  text-align: center;
+  margin-bottom: 28px;
+  line-height: 1.6;
+}
+
+/* ── 폼 ── */
+.form { display: flex; flex-direction: column; gap: 16px; }
+
+.fieldWrap { display: flex; flex-direction: column; gap: 6px; }
+
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #8B949E;
+  letter-spacing: 0.02em;
+}
+
+.labelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* 링크들 */
+.linkGroup {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+.linkDivider {
+  display: inline-block;
+  width: 1px; height: 10px;
+  background: rgba(255,255,255,0.12);
+  margin: 0 8px;
+}
+.linkBtn {
+  font-size: 11px;
+  color: #2ECC71;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif;
+  padding: 0;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+.linkBtn:hover { opacity: 0.75; }
+
+/* ── 인풋 ── */
+.inputWrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #1C2330;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  transition: all 0.18s;
+}
+.inputWrap:focus-within {
+  border-color: rgba(46,204,113,0.45);
+  background: #1a2535;
+  box-shadow: 0 0 0 3px rgba(46,204,113,0.08);
+}
+.inputError  { border-color: rgba(248,81,73,0.45) !important; box-shadow: 0 0 0 3px rgba(248,81,73,0.06) !important; }
+.inputOk     { border-color: rgba(46,204,113,0.45) !important; }
+.inputIcon   { color: #484F58; flex-shrink: 0; }
+.input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  color: #E6EDF3;
+  font-family: 'Noto Sans KR', sans-serif;
+  padding: 0;
+  box-shadow: none;
+  min-width: 0;
+}
+.input::placeholder { color: #484F58; }
+.eyeBtn {
+  color: #484F58;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+.eyeBtn:hover { color: #8B949E; }
+
+/* 에러 */
+.fieldErr {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #F85149;
+}
+.serverErr {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  background: rgba(248,81,73,0.08);
+  border: 1px solid rgba(248,81,73,0.2);
+  border-radius: 9px;
+  font-size: 13px;
+  color: #F85149;
+}
+
+/* 성공 배너 */
+.successBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 13px 16px;
+  background: rgba(46,204,113,0.08);
+  border: 1px solid rgba(46,204,113,0.2);
+  border-radius: 10px;
+  font-size: 13px;
+  color: #2ECC71;
+  line-height: 1.6;
+}
+
+/* 비밀번호 강도 */
+.pwRules { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 5px; }
+.pwRule {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: #484F58;
+  padding: 3px 9px;
+  border-radius: 99px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  transition: all 0.2s;
+}
+.pwRuleOk { color: #2ECC71; background: rgba(46,204,113,0.1); border-color: rgba(46,204,113,0.2); }
+
+/* 약관 */
+.agreeRow { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+.checkbox {
+  width: 18px; height: 18px;
+  border-radius: 5px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: #1C2330;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+  transition: all 0.15s;
+  color: #0D1117;
+}
+.checkboxChecked { background: #2ECC71; border-color: #2ECC71; }
+.checkboxError   { border-color: rgba(248,81,73,0.5); }
+.agreeText { font-size: 12px; color: #8B949E; line-height: 1.6; }
+.agreeLink { color: #2ECC71; text-decoration: none; font-weight: 600; }
+.agreeLink:hover { text-decoration: underline; }
+
+/* 방법 탭 */
+.methodTabs {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 20px;
+  background: #1C2330;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.methodTab {
+  flex: 1;
+  padding: 9px 12px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: #8B949E;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+.methodTabActive { background: #2ECC71 !important; color: #0D1117 !important; font-weight: 700; }
+
+/* 결과 박스 */
+.resultBox {
+  padding: 18px;
+  background: #1C2330;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  text-align: center;
+}
+.resultEmail {
+  font-family: 'Space Mono', monospace;
+  font-size: 16px;
+  font-weight: 700;
+  color: #2ECC71;
+  margin-bottom: 6px;
+}
+.resultHint { font-size: 12px; color: #8B949E; }
+
+/* 단계 인디케이터 */
+.stepIndicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 24px;
+}
+.stepBubble {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'Space Mono', monospace;
+  border: 2px solid rgba(255,255,255,0.1);
+  background: #1C2330;
+  color: #484F58;
+  position: relative; z-index: 1;
+  transition: all 0.2s;
+}
+.stepBubbleActive { border-color: #2ECC71; color: #2ECC71; background: #0D1117; }
+.stepBubbleDone   { border-color: #2ECC71; background: #2ECC71; color: #0D1117; }
+.stepLine { flex: 1; height: 2px; background: rgba(255,255,255,0.07); max-width: 40px; }
+.stepLineDone { background: #2ECC71; }
+
+/* ── 버튼들 ── */
+.submitBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px;
+  background: #2ECC71;
+  color: #0D1117;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Noto Sans KR', sans-serif;
+  width: 100%;
+  margin-top: 4px;
+}
+.submitBtn:hover:not(:disabled) {
+  background: #27ae60;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(46,204,113,0.35);
+}
+.submitBtn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.ghostBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 12px;
+  background: transparent;
+  color: #8B949E;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s;
+  font-family: 'Noto Sans KR', sans-serif;
+  width: 100%;
+}
+.ghostBtn:hover { border-color: rgba(255,255,255,0.2); color: #E6EDF3; }
+
+.btnRow { display: flex; gap: 8px; margin-top: 4px; }
+
+.spinner {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(0,0,0,0.2);
+  border-top-color: #0D1117;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── 하단 링크 ── */
+.switchText {
+  text-align: center;
+  font-size: 13px;
+  color: #8B949E;
+  margin-top: 22px;
+}
+.switchLink {
+  color: #2ECC71;
+  font-weight: 600;
+  text-decoration: none;
+  margin-left: 4px;
+  transition: opacity 0.15s;
+}
+.switchLink:hover { opacity: 0.8; }
+
+.bottomLinks {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: 20px;
+}
+.bottomLinkRow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  font-size: 12px;
+  color: #8B949E;
+}
+
+@media (max-width: 480px) {
+  .card { padding: 28px 20px 24px; border-radius: 14px; }
+  .title { font-size: 20px; }
+}
+
+/* ── 이메일 중복 확인 / 인증 추가 스타일 ─────────────────────────── */
+
+/* 이메일 인풋 + 버튼 가로 배치 */
+.inputRowWrap {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.inputFlex { flex: 1; }
+
+/* 인라인 버튼 (중복 확인 / 코드 확인) */
+.inlineBtn {
+  flex-shrink: 0;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: #1C2330;
+  color: #E6EDF3;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s, border-color 0.18s, opacity 0.18s;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+.inlineBtn:hover:not(:disabled) {
+  background: #2ECC71;
+  color: #0D1117;
+  border-color: #2ECC71;
+}
+.inlineBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+.inlineBtnDone {
+  background: rgba(46,204,113,0.12);
+  border-color: rgba(46,204,113,0.3);
+  color: #2ECC71;
+  cursor: default;
+}
+
+/* 재발송 아이콘 버튼 */
+.inlineBtnGhost {
+  flex-shrink: 0;
+  width: 40px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: transparent;
+  color: #8B949E;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: color 0.18s, border-color 0.18s;
+}
+.inlineBtnGhost:hover { color: #E6EDF3; border-color: rgba(255,255,255,0.2); }
+
+/* 인증코드 발송 버튼 (풀 너비) */
+.sendCodeBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 0;
+  border-radius: 10px;
+  border: 1.5px dashed rgba(46,204,113,0.35);
+  background: rgba(46,204,113,0.05);
+  color: #2ECC71;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+.sendCodeBtn:hover {
+  background: rgba(46,204,113,0.1);
+  border-color: rgba(46,204,113,0.6);
+}
+
+/* 카운트다운 타이머 */
+.countdown {
+  margin-left: 8px;
+  font-size: 11px;
+  font-family: 'Space Mono', monospace;
+  color: #F39C12;
+  font-weight: 700;
+}
+.countdownExpired {
+  margin-left: 8px;
+  font-size: 11px;
+  color: #E74C3C;
+  font-weight: 600;
+}
+
+/* 힌트 텍스트 */
+.fieldHintOk    { margin: 5px 0 0; font-size: 11px; color: #2ECC71; }
+.fieldHintErr   { margin: 5px 0 0; font-size: 11px; color: #E74C3C; }
+.fieldHintMuted { margin: 6px 0 0; font-size: 11px; color: #484F58; }
+
+/* 에러 인풋 테두리 */
+.inputErr {
+  border-color: rgba(231,76,60,0.5) !important;
+  box-shadow: 0 0 0 3px rgba(231,76,60,0.06) !important;
+}
+
+/* 인증 완료 배지 */
+.verifiedBadge {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  background: rgba(46,204,113,0.08);
+  border: 1px solid rgba(46,204,113,0.2);
+  color: #2ECC71;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* 작은 스피너 (중복 확인 버튼 내) */
+.spinnerSm {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,0.2);
+  border-top-color: #E6EDF3;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* ── 가입 성공 모달 ──────────────────────────────────────────────── */
+.successOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  animation: fadeIn 0.22s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.successCard {
+  width: 100%;
+  max-width: 360px;
+  background: #161B22;
+  border: 1px solid rgba(46,204,113,0.2);
+  border-radius: 20px;
+  padding: 40px 32px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(46,204,113,0.08);
+  animation: cardPop 0.35s cubic-bezier(0.34,1.4,0.64,1);
+}
+@keyframes cardPop {
+  from { opacity: 0; transform: scale(0.88) translateY(16px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.successIconWrap {
+  position: relative;
+  width: 68px; height: 68px;
+  display: grid;
+  place-items: center;
+}
+.successIconRing {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(46,204,113,0.3);
+  animation: ringPulse 1.8s ease-in-out infinite;
+}
+@keyframes ringPulse {
+  0%, 100% { transform: scale(1);    opacity: 1; }
+  50%       { transform: scale(1.15); opacity: 0.4; }
+}
+.successIcon {
+  color: #2ECC71;
+  position: relative;
+  z-index: 1;
+  background: rgba(46,204,113,0.1);
+  border-radius: 50%;
+  padding: 10px;
+  width: 52px !important;
+  height: 52px !important;
+}
+
+.successTitle {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: #E6EDF3;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.successDesc {
+  font-size: 14px;
+  color: #8B949E;
+  line-height: 1.8;
+  margin: 0;
+}
+
+.successBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 28px;
+  background: #2ECC71;
+  color: #0D1117;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Noto Sans KR', sans-serif;
+  margin-top: 4px;
+  width: 100%;
+  justify-content: center;
+}
+.successBtn:hover {
+  background: #27ae60;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(46,204,113,0.35);
+}
+
+.successHint {
+  font-size: 11px;
+  color: #484F58;
+  margin: 0;
+}

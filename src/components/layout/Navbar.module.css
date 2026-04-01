@@ -1,0 +1,409 @@
+/* ── 네비바 ── */
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  padding: 0 20px;
+  background: #0D1117;
+  border-bottom: 1px solid rgba(46,204,113,0.1);
+  position: sticky;
+  top: 0;
+  z-index: 300;
+  flex-shrink: 0;
+  backdrop-filter: blur(12px);
+  background: rgba(13,17,23,0.95);
+}
+
+/* ── 왼쪽 ── */
+.navLeft {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.menuBtn {
+  width: 38px; height: 38px;
+  border-radius: 9px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: transparent;
+  color: #8B949E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.18s;
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+.menuBtn:hover {
+  background: rgba(46,204,113,0.1);
+  border-color: rgba(46,204,113,0.25);
+  color: #2ECC71;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: all 0.18s;
+  text-decoration: none;
+}
+.logo:hover { background: rgba(255,255,255,0.04); }
+
+.logoEmoji {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.logoText {
+  font-family: 'Jua', sans-serif;
+  font-size: 20px;
+  font-weight: 400;
+  color: #2ECC71;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #484F58;
+  margin-left: 4px;
+}
+.breadcrumbArrow { color: #484F58; }
+
+/* ── 오른쪽 ── */
+.navRight {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.iconBtn {
+  width: 36px; height: 36px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #8B949E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.18s;
+  position: relative;
+  flex-shrink: 0;
+}
+.iconBtn:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.08);
+  color: #E6EDF3;
+}
+
+.cartBadge {
+  position: absolute;
+  top: 3px; right: 3px;
+  width: 15px; height: 15px;
+  background: #F39C12;
+  color: #0D1117;
+  border-radius: 99px;
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── 검색 ── */
+.searchWrap {
+  position: relative;
+}
+
+.searchExpanded {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 36px;
+  width: 260px;
+  background: #1C2330;
+  border: 1px solid rgba(46,204,113,0.3);
+  border-radius: 9px;
+  box-shadow: 0 0 0 3px rgba(46,204,113,0.07);
+  animation: expandSearch 0.2s ease;
+}
+
+@keyframes expandSearch {
+  from { width: 36px; opacity: 0.5; }
+  to   { width: 260px; opacity: 1; }
+}
+
+.searchIcon { color: #2ECC71; flex-shrink: 0; }
+
+.searchInput {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  color: #E6EDF3;
+  font-family: 'Noto Sans KR', sans-serif;
+  padding: 0;
+  box-shadow: none;
+  min-width: 0;
+}
+.searchInput::placeholder { color: #484F58; }
+
+.searchClose {
+  color: #484F58;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: 4px;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+.searchClose:hover { color: #E6EDF3; }
+
+/* 검색 드롭다운 */
+.searchDropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 320px;
+  background: #161B22;
+  border: 1px solid rgba(46,204,113,0.15);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  overflow: hidden;
+  z-index: 400;
+  animation: dropIn 0.15s ease;
+}
+
+@keyframes dropIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.searchItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 16px;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.12s;
+  text-align: left;
+  font-family: 'Noto Sans KR', sans-serif;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.searchItem:last-child { border-bottom: none; }
+.searchItem:hover,
+.searchItemFocused { background: rgba(46,204,113,0.07); }
+
+.searchItemIcon { font-size: 18px; flex-shrink: 0; }
+.searchItemText { flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.searchItemLabel { font-size: 13px; font-weight: 600; color: #E6EDF3; }
+.searchItemDesc  { font-size: 11px; color: #484F58; }
+.searchItemPath  { font-size: 10px; color: #2ECC71; font-family: 'Space Mono', monospace; flex-shrink: 0; }
+
+.searchEmpty {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 16px;
+  font-size: 13px;
+  color: #484F58;
+}
+
+/* ── 유저 영역 ── */
+.userWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  border-radius: 99px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: #1C2330;
+}
+
+.avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid rgba(46,204,113,0.2);
+}
+
+.userName {
+  font-size: 13px;
+  font-weight: 600;
+  color: #E6EDF3;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logoutBtn {
+  display: flex;
+  align-items: center;
+  color: #484F58;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  transition: color 0.15s;
+}
+.logoutBtn:hover { color: #F85149; }
+
+.loginBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  background: #2ECC71;
+  color: #0D1117;
+  border: none;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.loginBtn:hover {
+  background: #27ae60;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(46,204,113,0.3);
+}
+
+/* ── 로그아웃 확인 모달 ── */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeOverlay 0.18s ease;
+}
+
+@keyframes fadeOverlay {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.modalBox {
+  background: #161B22;
+  border: 1px solid rgba(46, 204, 113, 0.18);
+  border-radius: 16px;
+  padding: 32px 28px 24px;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255,255,255,0.04);
+  animation: popIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.88) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modalIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: rgba(248, 81, 73, 0.1);
+  border: 1px solid rgba(248, 81, 73, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #F85149;
+  margin-bottom: 4px;
+}
+
+.modalTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #E6EDF3;
+  margin: 0;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+
+.modalDesc {
+  font-size: 13px;
+  color: #484F58;
+  margin: 0 0 8px;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+
+.modalActions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.modalCancel {
+  flex: 1;
+  padding: 10px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #1C2330;
+  color: #8B949E;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif;
+  transition: all 0.15s;
+}
+.modalCancel:hover {
+  background: #21262D;
+  color: #E6EDF3;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.modalConfirm {
+  flex: 1;
+  padding: 10px;
+  border-radius: 9px;
+  border: none;
+  background: rgba(248, 81, 73, 0.15);
+  color: #F85149;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif;
+  transition: all 0.15s;
+  border: 1px solid rgba(248, 81, 73, 0.25);
+}
+.modalConfirm:hover {
+  background: #F85149;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(248, 81, 73, 0.3);
+}
+
+@media (max-width: 600px) {
+  .navbar { padding: 0 12px; }
+  .logoText { font-size: 17px; }
+  .breadcrumb { display: none; }
+  .userName { display: none; }
+  .searchExpanded { width: 180px; }
+}

@@ -1,0 +1,160 @@
+/* ── 오버레이 ── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+  animation: fadeIn 0.18s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── 모달 카드 ── */
+.modal {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  background: #161B22;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 36px 32px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6);
+  animation: slideUp 0.26s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── 닫기 버튼 ── */
+.closeBtn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.05);
+  color: #8B949E;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all 0.15s;
+}
+.closeBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #E6EDF3;
+}
+
+/* ── 아이콘 영역 ── */
+.iconWrap {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 20px;
+}
+
+.iconBg {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(248, 81, 73, 0.1);
+  border: 1px solid rgba(248, 81, 73, 0.2);
+}
+
+.icon {
+  color: #F85149;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── 텍스트 ── */
+.title {
+  font-family: 'Syne', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: #E6EDF3;
+  letter-spacing: -0.03em;
+  margin: 0 0 10px;
+  text-align: center;
+}
+
+.desc {
+  font-size: 13px;
+  color: #8B949E;
+  text-align: center;
+  line-height: 1.7;
+  margin: 0 0 28px;
+}
+
+/* ── 버튼 행 ── */
+.btnRow {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.cancelBtn {
+  flex: 1;
+  padding: 13px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: #8B949E;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif;
+  transition: all 0.18s;
+}
+.cancelBtn:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #E6EDF3;
+}
+
+.confirmBtn {
+  flex: 1;
+  padding: 13px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(248, 81, 73, 0.15);
+  color: #F85149;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  transition: all 0.18s;
+  border: 1px solid rgba(248, 81, 73, 0.25);
+}
+.confirmBtn:hover {
+  background: rgba(248, 81, 73, 0.25);
+  border-color: rgba(248, 81, 73, 0.45);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(248, 81, 73, 0.2);
+}
+
+@media (max-width: 480px) {
+  .modal { padding: 28px 20px 22px; }
+  .btnRow { flex-direction: column; }
+}
