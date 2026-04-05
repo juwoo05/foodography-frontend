@@ -36,6 +36,7 @@ export default function Navbar({ onMenuClick }) {
   const location  = useLocation()
   const cartItems = useAppStore(s => s.cartItems)
   const { user, logout } = useAuthStore()
+  const displayName = user?.email?.split('@')[0] ?? ''
 
   const [searchOpen,    setSearchOpen]    = useState(false)
   const [searchQuery,   setSearchQuery]   = useState('')
@@ -98,8 +99,8 @@ export default function Navbar({ onMenuClick }) {
     else if (e.key === 'Escape') closeSearch()
   }
 
-  const handleLogoutConfirm = () => {
-    logout()
+  const handleLogoutConfirm = async () => {
+    await logout()
     setLogoutOpen(false)
     navigate('/login', { replace: true })
   }
@@ -194,13 +195,8 @@ export default function Navbar({ onMenuClick }) {
         {/* 유저 */}
         {user ? (
           <div className={styles.userWrap}>
-            <img
-              src={user.avatar}
-              alt={user.name}
-              className={styles.avatar}
-              onError={e => { e.target.onerror = null; e.target.style.display = 'none' }}
-            />
-            <span className={styles.userName}>{user.name}</span>
+            <User size={18} className={styles.avatar} />
+            <span className={styles.userName}>{displayName}</span>
             <button className={styles.logoutBtn} onClick={() => setLogoutOpen(true)} title="로그아웃">
               <LogOut size={15} />
             </button>

@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import {
   Camera, ChefHat, ShoppingCart, BookOpen, Home,
   RotateCcw, LogOut, LogIn, UserPlus, X,
-  Refrigerator, Star
+  Refrigerator, Star, User
 } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { useAuthStore } from '../../store/authStore'
@@ -24,8 +24,13 @@ export default function Sidebar({ open, onClose }) {
   const reset     = useAppStore(s => s.reset)
   const cartItems = useAppStore(s => s.cartItems)
   const { user, logout } = useAuthStore()
+  const displayName = user?.email?.split('@')[0] ?? ''
 
-  const handleLogout = () => { logout(); navigate('/login'); onClose() }
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login')
+    onClose()
+  }
 
   const handleNav = () => onClose()
 
@@ -53,14 +58,9 @@ export default function Sidebar({ open, onClose }) {
         {/* 유저 카드 */}
         {user ? (
           <div className={styles.userCard}>
-            <img
-              src={user.avatar}
-              alt={user.name}
-              className={styles.avatar}
-              onError={e => { e.target.onerror = null; e.target.style.display = 'none' }}
-            />
+            <User size={32} className={styles.avatar} />
             <div className={styles.userInfo}>
-              <span className={styles.userName}>{user.name}</span>
+              <span className={styles.userName}>{displayName}</span>
               <span className={styles.userEmail}>{user.email}</span>
             </div>
           </div>

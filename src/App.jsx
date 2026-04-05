@@ -1,4 +1,6 @@
 import React from "react"
+import { useEffect } from 'react'
+import { useAuthStore } from './store/authStore'
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 import Layout from "./components/layout/Layout"
 import HomePage from "./pages/HomePage"
@@ -16,6 +18,12 @@ import ReviewPage from './pages/ReviewPage'
 
 // inside Routes
 export default function App() {
+
+  const checkSession = useAuthStore(s => s.checkSession)
+
+  useEffect(() => {
+    checkSession()  // 새로고침 포함, 앱 시작 시 딱 한 번
+  }, [])
   return (
     <BrowserRouter>
       <Routes>

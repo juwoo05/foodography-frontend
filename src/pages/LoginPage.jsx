@@ -11,8 +11,8 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const { login, isLoading, error, clearError, user } = useAuthStore()
 
-  const [email,     setEmail]     = useState('jijuwoo@gmail.ocm')
-  const [password,  setPassword]  = useState('jizoowoo123')
+  const [email,     setEmail]     = useState()
+  const [password,  setPassword]  = useState()
   const [showPw,    setShowPw]    = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [modalErrs, setModalErrs] = useState([])
@@ -44,17 +44,9 @@ export default function LoginPage() {
       setModalOpen(true)
       return
     }
-    try {
-      const data = await loginUser(email, password)
-      if (data.result === 1) {
-        navigate('/')
-      } else {
-        setModalErrs([data.msg])
-        setModalOpen(true)
-      }
-    } catch (e) {
-      setModalErrs(['서버 오류가 발생했습니다.'])
-      setModalOpen(true)
+    const result = await login(email, password)
+    if (result.success) {
+      navigate('/')
     }
   }
 

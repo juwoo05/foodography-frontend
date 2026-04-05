@@ -66,6 +66,21 @@ export async function loginUser(email, password) {
   return res.data  // { result: 1, msg: '로그인 성공했습니다.' }
 }
 
+// ── 세션 확인 ────────────────────────────────────
+export async function sessionCheck() {
+  const res = await userApi.get('/api/user/sessionCheck')
+  return res.data  // { email, existYn: 'Y' } 또는 { existYn: 'N' }
+}
+
+// ── 로그아웃 ─────────────────────────────────────
+export async function logoutUser() {
+  const res = await userApi.post(
+      '/api/user/logout',
+      new URLSearchParams()
+  )
+  return res.data
+}
+
 // ── 냉장고 분석 ──────────────────────────────────────
 export async function analyzeImage(file) {
   const form = new FormData()
