@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore'
 import Navbar from '../components/layout/Navbar'
 import ValidationModal from '../components/ui/ValidationModal'
 import styles from './AuthPage.module.css'
+import { loginUser } from '../utils/api'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -43,9 +44,18 @@ export default function LoginPage() {
       setModalOpen(true)
       return
     }
-    // 실제 인증 로직은 authStore.login 내부에서 처리
-    const res = await login(email, password)
-    if (res.success) navigate('/')
+    try {
+      const data = await loginUser(email, password)
+      if (data.result === 1) {
+        navigate('/')
+      } else {
+        setModalErrs([data.msg])
+        setModalOpen(true)
+      }
+    } catch (e) {
+      setModalErrs(['서버 오류가 발생했습니다.'])
+      setModalOpen(true)
+    }
   }
 
   return (

@@ -11,7 +11,10 @@ import LoginPage from "./pages/LoginPage"
 import SignupPage from "./pages/SignupPage"
 import FindIdPage from "./pages/FindIdPage"
 import FindPwPage from "./pages/FindPwPage"
+import FridgePage from './pages/FridgePage'
+import ReviewPage from './pages/ReviewPage'
 
+// inside Routes
 export default function App() {
   return (
     <BrowserRouter>
@@ -28,6 +31,8 @@ export default function App() {
           <Route path="recipes"  element={<RecipesPage />} />
           <Route path="shopping" element={<ShoppingPage />} />
           <Route path="cooking"  element={<CookingPage />} />
+          <Route path="/fridge" element={<FridgePage />} />
+          <Route path="/review" element={<ReviewPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

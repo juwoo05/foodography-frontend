@@ -127,9 +127,9 @@ export default function ShoppingPage() {
   const totalCart = cartItems.reduce((s, i) => s + i.price, 0)
 
   const TABS = [
-    { key: 'coupang', label: '🛒 쿠팡',    deepLink: 'https://www.coupang.com/np/search?q=' },
-    { key: 'kurly',   label: '🌿 마켓컬리', deepLink: 'https://www.kurly.com/search?sword=' },
-    { key: 'emart',   label: '🏪 이마트몰', deepLink: 'https://emart.ssg.com/search/result.ssg?target=all&query=' },
+    { key: 'coupang', label: '💰 최적가',    deepLink: 'https://www.coupang.com/np/search?q=' },
+    { key: 'kurly',   label: '💬 후기순', deepLink: 'https://www.kurly.com/search?sword=' },
+    { key: 'emart',   label: '⭐ 별점순', deepLink: 'https://emart.ssg.com/search/result.ssg?target=all&query=' },
   ]
 
   const doDeepLink = (base) => {

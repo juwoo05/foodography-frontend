@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import {
   Camera, ChefHat, ShoppingCart, BookOpen, Home,
   RotateCcw, LogOut, LogIn, UserPlus, X,
+  Refrigerator, Star
 } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { useAuthStore } from '../../store/authStore'
@@ -14,6 +15,8 @@ const NAV_ITEMS = [
   { to: '/recipes',  icon: ChefHat,      label: '레시피',     emoji: '🍳' },
   { to: '/shopping', icon: ShoppingCart, label: '쇼핑',       emoji: '🛒' },
   { to: '/cooking',  icon: BookOpen,     label: '요리 가이드', emoji: '👨‍🍳' },
+  { to: '/fridge',   icon: Refrigerator, label: '나의 냉장고 분석', emoji: '🧊' },
+  { to: '/review',   icon: Star,         label: '오늘의 레시피 후기', emoji: '⭐' },
 ]
 
 export default function Sidebar({ open, onClose }) {

@@ -1,0 +1,345 @@
+/* ReviewPage.module.css */
+
+.container {
+    padding: 2rem;
+    color: var(--text-color, #EEEEEE);
+    min-height: 100vh;
+    /* FridgePage 배경색 참고 */
+    background-color: var(--bg-color, #080C0A);
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+    /* FridgePage 타이틀 포인트 컬러 */
+    color: var(--primary-color, #2ECC71);
+}
+
+.subTitle {
+    font-size: 1rem;
+    color: #aaa;
+    margin: 0.5rem 0 0 0;
+}
+
+/* 버튼 스타일 (Green) */
+.writeBtn, .submitBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: var(--primary-color, #2ECC71);
+    color: #000;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.writeBtn:hover, .submitBtn:hover {
+    background-color: #27ae60;
+    transform: translateY(-2px);
+}
+
+.cancelBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #333;
+    color: #ccc;
+    border: 1px solid #444;
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* --- [기능 2] 작성 폼 스타일 (FridgePage Card 참고) --- */
+.submissionForm {
+    background: rgba(255, 255, 255, 0.03); /* 유리 효과 */
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 3rem;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+.formGroup {
+    margin-bottom: 1.5rem;
+}
+
+.formGroup label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #ccc;
+    margin-bottom: 0.8rem;
+    font-size: 0.95rem;
+}
+
+.formGroup label svg {
+    color: var(--primary-color, #2ECC71);
+}
+
+/* Dark Input/Textarea */
+.input, .textarea {
+    width: 100%;
+    padding: 14px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 1px solid #333;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 1rem;
+    box-sizing: border-box; /* 패딩 포함 width */
+}
+
+.input:focus, .textarea:focus {
+    outline: none;
+    border-color: var(--primary-color, #2ECC71);
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.textarea {
+    resize: none;
+}
+
+/* [기능 1] 평점 UI */
+.starInputAction {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+}
+
+.interactiveStar {
+    cursor: pointer;
+    transition: transform 0.1s ease;
+}
+
+.interactiveStar:hover {
+    transform: scale(1.2);
+}
+
+.ratingText {
+    margin-left: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--primary-color, #2ECC71);
+}
+
+.submitBtn {
+    width: 100%;
+    justify-content: center;
+    font-size: 1.1rem;
+    padding: 15px;
+    margin-top: 1rem;
+}
+
+/* --- 후기 카드 리스트 --- */
+.list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+}
+
+.card {
+    /* FridgePage Grid Item 참고 */
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    overflow: hidden; /* 댓글 섹션 하단 곡면 처리 */
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    border-color: rgba(46, 204, 113, 0.2);
+}
+
+.reviewMain {
+    padding: 1.5rem;
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.userInfo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.avatar {
+    width: 32px;
+    height: 32px;
+    background-color: #2a2a2a;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid #444;
+}
+
+.userName {
+    font-weight: 600;
+    color: #fff;
+}
+
+.dateInfo {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.85rem;
+    color: #888;
+}
+
+.recipeLine {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1rem;
+    padding: 8px;
+    background-color: rgba(0, 0, 0, 0.15);
+    border-radius: 6px;
+}
+
+.recipeLine .icon {
+    color: var(--primary-color, #2ECC71);
+}
+
+.recipeName {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+    color: #fff;
+    flex: 1;
+}
+
+.ratingStars {
+    display: flex;
+    gap: 3px;
+}
+
+.staticStar {
+    /* fill은 JSX에서 inline으로 처리 */
+}
+
+.commentBody {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #ddd;
+    margin: 0;
+    /* FridgePage 아이템 구분선 느낌 */
+    padding-bottom: 0.5rem;
+}
+
+
+/* --- [기능 3] 댓글 섹션 스타일 --- */
+.commentSection {
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 1.2rem 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.commentCount {
+    font-size: 0.9rem;
+    color: #aaa;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 1rem;
+}
+
+.replyList {
+    margin-bottom: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.replyItem {
+    position: relative;
+    padding-left: 15px;
+}
+
+/* 댓글 앞 구분선 */
+.replyItem::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 4px;
+    bottom: 4px;
+    width: 2px;
+    background-color: #333;
+}
+
+.replyUser {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #bbb;
+    margin-right: 8px;
+}
+
+.replyText {
+    display: inline;
+    font-size: 0.9rem;
+    color: #ccc;
+    margin: 0;
+}
+
+.replyDate {
+    display: block;
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 2px;
+}
+
+/* 댓글 입력 Row */
+.replyInputRow {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.replyInput {
+    flex: 1;
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 0.9rem;
+}
+
+.replyInput:focus {
+    outline: none;
+    border-color: #555;
+}
+
+.replySubmitBtn {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 5px;
+    transition: color 0.2s ease;
+}
+
+.replySubmitBtn:hover {
+    color: var(--primary-color, #2ECC71);
+}

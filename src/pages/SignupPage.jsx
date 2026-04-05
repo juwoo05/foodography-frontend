@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore'
 import Navbar from '../components/layout/Navbar'
 import ValidationModal from '../components/ui/ValidationModal'
 import styles from './AuthPage.module.css'
+import { checkEmailExists, sendAuthCode, verifyAuthCode, registerUser } from '../utils/api'
 
 const PW_RULES = [
   { label: '6자 이상',  test: pw => pw.length >= 6 },
@@ -108,39 +109,53 @@ export default function SignupPage() {
       return
     }
     setDupLoading(true)
-    await new Promise(r => setTimeout(r, 800)) // API 시뮬레이션
-    const isDup = EXISTING_EMAILS.includes(email.trim().toLowerCase())
-    setDupResult(isDup ? 'dup' : 'ok')
-    setDupChecked(true)
-    setDupLoading(false)
+    try {
+      const data = await checkEmailExists(email)
+      setDupResult(data.existYn === 'Y' ? 'dup' : 'ok')
+      setDupChecked(true)
+    } catch (e) {
+      setModalErrs(['서버 오류가 발생했습니다.'])
+      setModalOpen(true)
+    } finally {
+      setDupLoading(false)  // 성공/실패 상관없이 로딩 해제
+    }
   }
 
   // ── 인증코드 발송 ────────────────────────────────────────────────
   const handleSendCode = async () => {
-    const code = generateCode()
-    setSecretCode(code)
-    setCodeGenerated(true)
-    setVerified(false)
-    setVerifyCode('')
-    setCodeError('')
-    countdown.start()
-    // 개발 확인용 — 실제 서비스에서는 제거
-    console.log(`[DEV] 인증코드: ${code}`)
-    alert(`[개발 확인용] 인증코드: ${code}\n실제 서비스에서는 이메일로 발송됩니다.`)
+    try {
+      const data = await sendAuthCode(email)
+      if (data.result === 1) {
+        setCodeGenerated(true)
+        setVerified(false)
+        setVerifyCode('')
+        setCodeError('')
+        countdown.start()
+      } else {
+        setCodeError(data.msg)
+      }
+    } catch (e) {
+      setCodeError('서버 오류가 발생했습니다.')
+    }
   }
 
   // ── 코드 확인 ────────────────────────────────────────────────────
-  const handleVerifyCode = () => {
+  const handleVerifyCode = async () => {
     if (countdown.remaining === 0) {
       setCodeError('인증 시간이 만료되었습니다. 코드를 다시 발송해주세요.')
       return
     }
-    if (verifyCode === secretCode) {
-      setVerified(true)
-      setCodeError('')
-      countdown.reset()
-    } else {
-      setCodeError('인증코드가 올바르지 않습니다.')
+    try {
+      const data = await verifyAuthCode(email, verifyCode)
+      if (data.result === 1) {
+        setVerified(true)
+        setCodeError('')
+        countdown.reset()
+      } else {
+        setCodeError(data.msg)
+      }
+    } catch (e) {
+      setCodeError('서버 오류가 발생했습니다.')
     }
   }
 
@@ -158,21 +173,24 @@ export default function SignupPage() {
     return errs
   }
 
-  const DEMO_ACCOUNTS = ['demo@test.com', 'admin@test.com']
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     const errs = validateForm()
     if (errs.length) { setModalErrs(errs); setModalOpen(true); return }
 
-    // 데모 계정이면 authStore 로직 그대로 (실패 → 에러 모달)
-    if (DEMO_ACCOUNTS.includes(email.trim().toLowerCase())) {
-      await signup(name, email, password)
-      return
+    try {
+      const data = await registerUser(name, email, phone, password)
+      if (data.result === 1) {
+        setSuccessModal(true)
+      } else {
+        setModalErrs([data.msg])
+        setModalOpen(true)
+      }
+    } catch (e) {
+      setModalErrs(['서버 오류가 발생했습니다.'])
+      setModalOpen(true)
     }
-
-    // 그 외 모든 이메일 → 가입 성공 모달
-    setSuccessModal(true)
   }
 
   return (

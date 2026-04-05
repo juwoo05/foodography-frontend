@@ -20,6 +20,18 @@ const getEmoji = (name) => {
   return '🥬'
 }
 
+// ── 필수 양념 목록 ─────────────────────────────────────────────────────
+const DEFAULT_SEASONINGS = [
+  { id: 's1', name: '간장',      emoji: '🫙', desc: '진간장 · 국간장' },
+  { id: 's2', name: '소금',      emoji: '🧂', desc: '꽃소금 · 천일염' },
+  { id: 's3', name: '설탕',      emoji: '🍬', desc: '백설탕 · 비정제당' },
+  { id: 's4', name: '고춧가루',  emoji: '🌶️', desc: '보통맛 · 매운맛' },
+  { id: 's5', name: '다진 마늘', emoji: '🧄', desc: '생마늘 · 시판 제품' },
+  { id: 's6', name: '참기름',    emoji: '🫗', desc: '들기름 대체 가능' },
+  { id: 's7', name: '식초',      emoji: '🍶', desc: '사과식초 · 현미식초' },
+  { id: 's8', name: '식용유',    emoji: '🛢️', desc: '포도씨유 · 카놀라유' },
+]
+
 // ── Canvas 유틸 ────────────────────────────────────────────────────────
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath()
@@ -35,7 +47,6 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath()
 }
 
-// 업로드 이미지 없을 때 그리는 가짜 냉장고 배경
 function drawFridgeBg(ctx, W, H, ingredients) {
   const grad = ctx.createLinearGradient(0, 0, 0, H)
   grad.addColorStop(0, '#1a2436')
@@ -65,7 +76,6 @@ function drawFridgeBg(ctx, W, H, ingredients) {
   })
 }
 
-// BBox 오버레이
 function drawBBoxes(ctx, W, H, ingredients, focusedId) {
   ingredients.forEach((ing, i) => {
     if (!ing.bbox) return
@@ -94,7 +104,6 @@ function drawBBoxes(ctx, W, H, ingredients, focusedId) {
       : (isFocused ? 'rgba(243,156,18,0.14)' : 'rgba(243,156,18,0.06)')
     ctx.beginPath(); roundRect(ctx, x, y, w, h, 5); ctx.fill()
 
-    // 라벨 pill
     const labelH = 18
     ctx.font = `bold 10px "Noto Sans KR", sans-serif`
     const labelText = `${ing.name}  ${Math.round((ing.confidence ?? 1) * 100)}%`
@@ -106,7 +115,6 @@ function drawBBoxes(ctx, W, H, ingredients, focusedId) {
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
     ctx.fillText(labelText, x + 5, labelY + labelH / 2)
 
-    // 인덱스 원
     ctx.fillStyle = isOk ? '#2ECC71' : '#F39C12'
     ctx.beginPath(); ctx.arc(x + w - 10, y + 10, 9, 0, Math.PI * 2); ctx.fill()
     ctx.fillStyle = '#0D1117'
@@ -127,6 +135,7 @@ export default function AnalyzePage() {
   const setRecipes       = useAppStore(s => s.setRecipes)
   const resetStore       = useAppStore(s => s.reset)
 
+  const [activePanel,  setActivePanel]  = useState('ingredients') // 'ingredients' | 'seasonings'
   const [focusedId,    setFocusedId]    = useState(null)
   const [zoom,         setZoom]         = useState(1)
   const [searchText,   setSearchText]   = useState('')
@@ -138,18 +147,21 @@ export default function AnalyzePage() {
   const [tooltip,      setTooltip]      = useState({ visible: false, x: 0, y: 0, name: '', conf: '' })
   const [editModal,    setEditModal]    = useState({ open: false, id: null, value: '' })
 
+  // 양념 체크 상태 (default: 전부 체크)
+  const [seasoningChecks, setSeasoningChecks] = useState(
+    () => Object.fromEntries(DEFAULT_SEASONINGS.map(s => [s.id, true]))
+  )
+
   const canvasRef    = useRef(null)
   const containerRef = useRef(null)
   const imgRef       = useRef(null)
   const notifTimer   = useRef(null)
 
-  // 스캔 라인 애니메이션은 최초 1회
   useEffect(() => {
     const t = setTimeout(() => setScanActive(false), 3500)
     return () => clearTimeout(t)
   }, [])
 
-  // 업로드 이미지 로드
   useEffect(() => {
     if (!uploadedImage) { imgRef.current = null; return }
     const img = new Image()
@@ -157,7 +169,6 @@ export default function AnalyzePage() {
     img.src = uploadedImage
   }, [uploadedImage])
 
-  // ── Canvas 렌더 ─────────────────────────────────────────────────────
   const renderCanvas = useCallback(() => {
     const canvas = canvasRef.current
     const ctr    = containerRef.current
@@ -182,7 +193,6 @@ export default function AnalyzePage() {
       ctx.fillStyle = 'rgba(13,17,23,0.2)'
       ctx.fillRect(0, 0, W, H)
 
-      // bbox 좌표를 이미지 렌더 영역 기준으로 리매핑
       const mapped = ingredients.map(ing => {
         if (!ing.bbox) return ing
         const { rx, ry, rw, rh } = ing.bbox
@@ -209,7 +219,6 @@ export default function AnalyzePage() {
     return () => ro.disconnect()
   }, [renderCanvas])
 
-  // ── Hit-test (리매핑 좌표 고려) ─────────────────────────────────────
   const getHit = useCallback((clientX, clientY) => {
     const canvas = canvasRef.current
     if (!canvas) return null
@@ -243,7 +252,6 @@ export default function AnalyzePage() {
     })
   }
 
-  // ── Canvas 이벤트 ───────────────────────────────────────────────────
   const handleMouseMove = (e) => {
     const hit  = getHit(e.clientX, e.clientY)
     const rect = canvasRef.current?.getBoundingClientRect()
@@ -269,17 +277,14 @@ export default function AnalyzePage() {
     }
   }
 
-  // ── Focus 토글 ─────────────────────────────────────────────────────
   const toggleFocus = (id) => setFocusedId(prev => prev === id ? null : id)
 
-  // ── 알림 ───────────────────────────────────────────────────────────
   const showNotif = (icon, text) => {
     if (notifTimer.current) clearTimeout(notifTimer.current)
     setNotif({ visible: true, icon, text })
     notifTimer.current = setTimeout(() => setNotif(n => ({ ...n, visible: false })), 2500)
   }
 
-  // ── 재료 조작 ──────────────────────────────────────────────────────
   const handleNameChange = (id, val) => {
     const ing = ingredients.find(i => i.id === id)
     if (!ing) return
@@ -360,6 +365,19 @@ export default function AnalyzePage() {
     }
   }
 
+  // ── 양념 체크 토글 ─────────────────────────────────────────────────
+  const toggleSeasoning = (id) => {
+    setSeasoningChecks(prev => {
+      const next = { ...prev, [id]: !prev[id] }
+      const s = DEFAULT_SEASONINGS.find(s => s.id === id)
+      showNotif(next[id] ? '✓' : '✕', `${s?.name} ${next[id] ? '있음' : '없음'}으로 변경`)
+      return next
+    })
+  }
+
+  const checkedCount   = Object.values(seasoningChecks).filter(Boolean).length
+  const uncheckedCount = DEFAULT_SEASONINGS.length - checkedCount
+
   // ── 통계 ───────────────────────────────────────────────────────────
   const okList   = ingredients.filter(i => (i.confidence ?? 1) >= 0.75)
   const warnList = ingredients.filter(i => (i.confidence ?? 1) < 0.75)
@@ -369,7 +387,6 @@ export default function AnalyzePage() {
   const filteredOk   = filtered.filter(i => (i.confidence ?? 1) >= 0.75)
   const filteredWarn = filtered.filter(i => (i.confidence ?? 1) < 0.75)
 
-  // 이미지도 없고 재료도 없으면 빈 상태
   if (!uploadedImage && ingredients.length === 0) {
     return (
       <div className={styles.emptyState}>
@@ -423,17 +440,14 @@ export default function AnalyzePage() {
           </div>
 
           <div className={styles.canvasContainer} ref={containerRef}>
-            {/* AI 배지 */}
             <div className={styles.aiBadge}>
               <div className={styles.aiDot} style={{ background: aiDotColor }} />
               <span className={styles.aiLabel}>AI</span>
               <span className={styles.aiStatus}>분석 완료</span>
             </div>
 
-            {/* 스캔 라인 */}
             {scanActive && <div className={styles.scanLine} />}
 
-            {/* 캔버스 */}
             <canvas
               ref={canvasRef}
               className={styles.canvas}
@@ -442,7 +456,6 @@ export default function AnalyzePage() {
               onClick={handleCanvasClick}
             />
 
-            {/* 호버 툴팁 */}
             <div
               className={`${styles.canvasTooltip} ${tooltip.visible ? styles.tooltipVisible : ''}`}
               style={{ left: tooltip.x, top: tooltip.y }}
@@ -451,7 +464,6 @@ export default function AnalyzePage() {
               <div className={styles.tooltipConf}>신뢰도 <span className={styles.tooltipConfVal}>{tooltip.conf}</span></div>
             </div>
 
-            {/* 줌 컨트롤 */}
             <div className={styles.zoomControls}>
               <button className={styles.zoomBtn} onClick={() => setZoom(z => Math.min(z + 0.2, 3))}>+</button>
               <button className={styles.zoomBtn} onClick={() => setZoom(z => Math.max(z - 0.2, 0.5))}>−</button>
@@ -463,95 +475,209 @@ export default function AnalyzePage() {
         {/* ── RIGHT: LIST EDITOR ── */}
         <div className={styles.listEditor}>
 
-          {/* 에디터 헤더 */}
-          <div className={styles.editorHeader}>
-            <div className={styles.editorTitleRow}>
-              <span className={styles.editorTitle}>🥕 인식된 식재료</span>
-              <span className={styles.totalCount}>({total}개)</span>
-              <div className={styles.headerActions}>
-                <button className={styles.btnGhost} onClick={handleReanalyze}>🔄 재분석</button>
-                <button className={styles.btnPrimary} onClick={() => setShowModal(true)}>분석 완료 →</button>
-              </div>
-            </div>
-            <div className={styles.statChips}>
-              <div className={`${styles.statChip} ${styles.chipGreen}`}>
-                <div className={styles.chipDot} />
-                성공 <strong>{okList.length}</strong>개
-              </div>
-              <div className={`${styles.statChip} ${styles.chipOrange}`}>
-                <div className={styles.chipDot} />
-                확인 필요 <strong>{warnList.length}</strong>개
-              </div>
-            </div>
-            <div className={styles.searchWrap}>
-              <span className={styles.searchIcon}>🔍</span>
-              <input
-                type="text"
-                placeholder="식재료 검색..."
-                value={searchText}
-                onChange={e => setSearchText(e.target.value)}
-                className={styles.searchInput}
-              />
-            </div>
-          </div>
-
-          {/* 재료 목록 */}
-          <div className={styles.ingList}>
-            {filteredOk.length > 0 && (
-              <>
-                <div className={styles.sectionLabel}>✓ 인식 성공 ({filteredOk.length})</div>
-                {filteredOk.map(ing => (
-                  <IngCard
-                    key={ing.id} ing={ing}
-                    isFocused={focusedId === ing.id} isWarn={false}
-                    onFocus={() => toggleFocus(ing.id)}
-                    onEditOpen={() => openEditModal(ing)}
-                    onQty={d => handleQty(ing.id, d)}
-                    onQtyDirect={v => handleQtyDirect(ing.id, v)}
-                    onDelete={() => handleDelete(ing.id)}
-                  />
-                ))}
-              </>
-            )}
-            {filteredWarn.length > 0 && (
-              <>
-                <div className={styles.sectionLabel}>⚠ 확인 필요 ({filteredWarn.length})</div>
-                {filteredWarn.map(ing => (
-                  <IngCard
-                    key={ing.id} ing={ing}
-                    isFocused={focusedId === ing.id} isWarn={true}
-                    onFocus={() => toggleFocus(ing.id)}
-                    onEditOpen={() => openEditModal(ing)}
-                    onQty={d => handleQty(ing.id, d)}
-                    onQtyDirect={v => handleQtyDirect(ing.id, v)}
-                    onDelete={() => handleDelete(ing.id)}
-                  />
-                ))}
-              </>
-            )}
-            <button className={styles.addIngBtn} onClick={handleAddNew}>
-              ＋ 식재료 직접 추가
+          {/* ── 패널 탭 전환 ── */}
+          <div className={styles.panelTabs}>
+            <button
+              className={`${styles.panelTab} ${activePanel === 'ingredients' ? styles.panelTabActive : ''}`}
+              onClick={() => setActivePanel('ingredients')}
+            >
+              🥕 식재료
+              <span className={styles.panelTabBadge}>{total}</span>
+            </button>
+            <button
+              className={`${styles.panelTab} ${activePanel === 'seasonings' ? styles.panelTabActive : ''}`}
+              onClick={() => setActivePanel('seasonings')}
+            >
+              🫙 양념·부재료
+              {uncheckedCount > 0 && (
+                <span className={`${styles.panelTabBadge} ${styles.panelTabBadgeWarn}`}>{uncheckedCount}</span>
+              )}
             </button>
           </div>
 
-          {/* 푸터 */}
-          <div className={styles.editorFooter}>
-            <div className={styles.footerInfo}>
-              <span className={styles.footerLabel}>인식 정확도</span>
-              <span className={styles.footerVal}>{pct}% ({okList.length}/{total} 항목)</span>
-            </div>
-            <div className={styles.progressBar}>
-              <div className={styles.progressFill} style={{ width: `${pct}%` }} />
-            </div>
-            <div className={styles.footerBtns}>
-              <button className={styles.btnGhost} onClick={handleReset}>초기화</button>
-              <button className={styles.btnComplete} onClick={() => setShowModal(true)} disabled={isSubmitting}>
-                {isSubmitting
-                  ? <><span className={styles.spinner} />처리 중...</>
-                  : '✓ 분석 완료 — 요리 추천 받기'}
-              </button>
-            </div>
-          </div>
+          {/* ══ 패널 A: 인식된 식재료 ══ */}
+          {activePanel === 'ingredients' && (
+            <>
+              <div className={styles.editorHeader}>
+                <div className={styles.editorTitleRow}>
+                  <span className={styles.editorTitle}>🥕 인식된 식재료</span>
+                  <span className={styles.totalCount}>({total}개)</span>
+                  <div className={styles.headerActions}>
+                    <button className={styles.btnGhost} onClick={handleReanalyze}>🔄 재분석</button>
+                    <button className={styles.btnPrimary} onClick={() => setShowModal(true)}>분석 완료 →</button>
+                  </div>
+                </div>
+                <div className={styles.statChips}>
+                  <div className={`${styles.statChip} ${styles.chipGreen}`}>
+                    <div className={styles.chipDot} />
+                    성공 <strong>{okList.length}</strong>개
+                  </div>
+                  <div className={`${styles.statChip} ${styles.chipOrange}`}>
+                    <div className={styles.chipDot} />
+                    확인 필요 <strong>{warnList.length}</strong>개
+                  </div>
+                </div>
+                <div className={styles.searchWrap}>
+                  <span className={styles.searchIcon}>🔍</span>
+                  <input
+                    type="text"
+                    placeholder="식재료 검색..."
+                    value={searchText}
+                    onChange={e => setSearchText(e.target.value)}
+                    className={styles.searchInput}
+                  />
+                </div>
+              </div>
+
+              <div className={styles.ingList}>
+                {filteredOk.length > 0 && (
+                  <>
+                    <div className={styles.sectionLabel}>✓ 인식 성공 ({filteredOk.length})</div>
+                    {filteredOk.map(ing => (
+                      <IngCard
+                        key={ing.id} ing={ing}
+                        isFocused={focusedId === ing.id} isWarn={false}
+                        onFocus={() => toggleFocus(ing.id)}
+                        onEditOpen={() => openEditModal(ing)}
+                        onQty={d => handleQty(ing.id, d)}
+                        onQtyDirect={v => handleQtyDirect(ing.id, v)}
+                        onDelete={() => handleDelete(ing.id)}
+                      />
+                    ))}
+                  </>
+                )}
+                {filteredWarn.length > 0 && (
+                  <>
+                    <div className={styles.sectionLabel}>⚠ 확인 필요 ({filteredWarn.length})</div>
+                    {filteredWarn.map(ing => (
+                      <IngCard
+                        key={ing.id} ing={ing}
+                        isFocused={focusedId === ing.id} isWarn={true}
+                        onFocus={() => toggleFocus(ing.id)}
+                        onEditOpen={() => openEditModal(ing)}
+                        onQty={d => handleQty(ing.id, d)}
+                        onQtyDirect={v => handleQtyDirect(ing.id, v)}
+                        onDelete={() => handleDelete(ing.id)}
+                      />
+                    ))}
+                  </>
+                )}
+                <button className={styles.addIngBtn} onClick={handleAddNew}>
+                  ＋ 식재료 직접 추가
+                </button>
+              </div>
+
+              <div className={styles.editorFooter}>
+                <div className={styles.footerInfo}>
+                  <span className={styles.footerLabel}>인식 정확도</span>
+                  <span className={styles.footerVal}>{pct}% ({okList.length}/{total} 항목)</span>
+                </div>
+                <div className={styles.progressBar}>
+                  <div className={styles.progressFill} style={{ width: `${pct}%` }} />
+                </div>
+                <div className={styles.footerBtns}>
+                  <button className={styles.btnGhost} onClick={handleReset}>초기화</button>
+                  <button className={styles.btnComplete} onClick={() => setShowModal(true)} disabled={isSubmitting}>
+                    {isSubmitting
+                      ? <><span className={styles.spinner} />처리 중...</>
+                      : '✓ 분석 완료 — 요리 추천 받기'}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ══ 패널 B: 필수 양념·부재료 ══ */}
+          {activePanel === 'seasonings' && (
+            <>
+              <div className={styles.editorHeader}>
+                <div className={styles.editorTitleRow}>
+                  <span className={styles.editorTitle}>🫙 필수 양념·부재료</span>
+                  <span className={styles.totalCount}>({DEFAULT_SEASONINGS.length}개)</span>
+                </div>
+                <div className={styles.statChips}>
+                  <div className={`${styles.statChip} ${styles.chipGreen}`}>
+                    <div className={styles.chipDot} />
+                    있음 <strong>{checkedCount}</strong>개
+                  </div>
+                  <div className={`${styles.statChip} ${styles.chipOrange}`}>
+                    <div className={styles.chipDot} />
+                    없음 <strong>{uncheckedCount}</strong>개
+                  </div>
+                </div>
+                <p className={styles.seasoningDesc}>
+                  요리에 필요한 기본 양념이 있는지 확인하세요.<br />
+                  없는 항목은 쇼핑 가이드에 자동으로 추가됩니다.
+                </p>
+              </div>
+
+              <div className={styles.ingList}>
+                <div className={styles.sectionLabel}>기본 양념 체크리스트</div>
+                {DEFAULT_SEASONINGS.map(s => {
+                  const checked = seasoningChecks[s.id]
+                  return (
+                    <div
+                      key={s.id}
+                      className={`${styles.seasoningCard} ${checked ? styles.seasoningCardChecked : styles.seasoningCardUnchecked}`}
+                      onClick={() => toggleSeasoning(s.id)}
+                    >
+                      <div className={styles.seasoningCheckbox}>
+                        {checked
+                          ? <span className={styles.checkboxOn}>✓</span>
+                          : <span className={styles.checkboxOff} />}
+                      </div>
+                      <div className={styles.seasoningEmoji}>{s.emoji}</div>
+                      <div className={styles.seasoningInfo}>
+                        <div className={`${styles.seasoningName} ${checked ? styles.seasoningNameChecked : styles.seasoningNameUnchecked}`}>
+                          {s.name}
+                        </div>
+                        <div className={styles.seasoningSubDesc}>{s.desc}</div>
+                      </div>
+                      <div className={`${styles.seasoningBadge} ${checked ? styles.seasoningBadgeHave : styles.seasoningBadgeLack}`}>
+                        {checked ? '있음' : '없음'}
+                      </div>
+                    </div>
+                  )
+                })}
+
+                {/* 전체 토글 버튼 */}
+                <div className={styles.seasoningBulkRow}>
+                  <button
+                    className={styles.btnGhost}
+                    onClick={() => setSeasoningChecks(Object.fromEntries(DEFAULT_SEASONINGS.map(s => [s.id, true])))}
+                  >
+                    전부 있음
+                  </button>
+                  <button
+                    className={styles.btnGhost}
+                    onClick={() => setSeasoningChecks(Object.fromEntries(DEFAULT_SEASONINGS.map(s => [s.id, false])))}
+                  >
+                    전부 없음
+                  </button>
+                </div>
+              </div>
+
+              <div className={styles.editorFooter}>
+                <div className={styles.footerInfo}>
+                  <span className={styles.footerLabel}>보유 양념</span>
+                  <span className={styles.footerVal}>{checkedCount} / {DEFAULT_SEASONINGS.length}개</span>
+                </div>
+                <div className={styles.progressBar}>
+                  <div
+                    className={styles.progressFill}
+                    style={{ width: `${Math.round(checkedCount / DEFAULT_SEASONINGS.length * 100)}%` }}
+                  />
+                </div>
+                <div className={styles.footerBtns}>
+                  <button className={styles.btnComplete} onClick={() => setShowModal(true)} disabled={isSubmitting}>
+                    {isSubmitting
+                      ? <><span className={styles.spinner} />처리 중...</>
+                      : '✓ 분석 완료 — 요리 추천 받기'}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 

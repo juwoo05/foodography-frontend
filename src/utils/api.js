@@ -1,5 +1,13 @@
+import axios from 'axios'
+
 // Base URL — set via .env: VITE_API_BASE=http://localhost:8080
 const BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080'
+
+// axios 인스턴스 — 회원/인증 관련 요청에만 사용
+const userApi = axios.create({
+  baseURL: BASE,
+  withCredentials: true,  // 세션 쿠키 포함 — 필수!
+})
 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE}${path}`, {
@@ -11,6 +19,51 @@ async function request(path, options = {}) {
     throw new Error(text || `HTTP ${res.status}`)
   }
   return res.json()
+}
+
+// ── 이메일 중복 확인 ─────────────────────────────
+export async function checkEmailExists(email) {
+  const res = await userApi.post(
+      '/api/user/getEmailExists',
+      new URLSearchParams({ email })
+  )
+  return res.data  // { existYn: 'Y' } 또는 { existYn: 'N' }
+}
+
+// ── 인증코드 발송 ─────────────────────────────────
+export async function sendAuthCode(email) {
+  const res = await userApi.post(
+      '/api/user/sendEmailAuthCode',
+      new URLSearchParams({ email })
+  )
+  return res.data  // { result: 1, msg: '...' }
+}
+
+// ── 인증코드 검증 ─────────────────────────────────
+export async function verifyAuthCode(email, code) {
+  const res = await userApi.post(
+      '/api/user/verifyEmailCode',
+      new URLSearchParams({ email, code })
+  )
+  return res.data  // { result: 1, msg: '인증 성공' }
+}
+
+// ── 회원가입 ──────────────────────────────────────
+export async function registerUser(userName, email, phoneNum, password) {
+  const res = await userApi.post(
+      '/api/user/insertUserInfo',
+      new URLSearchParams({ userName, email, phoneNum, password })
+  )
+  return res.data  // { result: 1, msg: '회원가입되었습니다.' }
+}
+
+// ── 로그인 ────────────────────────────────────────
+export async function loginUser(email, password) {
+  const res = await userApi.post(
+      '/api/user/loginProc',
+      new URLSearchParams({ email, password })
+  )
+  return res.data  // { result: 1, msg: '로그인 성공했습니다.' }
 }
 
 // ── 냉장고 분석 ──────────────────────────────────────
