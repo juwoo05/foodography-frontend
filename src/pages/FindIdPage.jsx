@@ -4,12 +4,7 @@ import { User, Phone, AlertCircle, ArrowRight, ChevronLeft, CheckCircle } from '
 import Navbar from '../components/layout/Navbar'
 import ValidationModal from '../components/ui/ValidationModal'
 import styles from './AuthPage.module.css'
-
-async function mockFindId(data) {
-  await new Promise(r => setTimeout(r, 1000))
-  if (data.name === '홍길동') return { found: true, email: 'hong***@gmail.com' }
-  return { found: false }
-}
+import { searchUserEmail } from '../utils/api'  // 경로 확인
 
 export default function FindIdPage() {
   const navigate = useNavigate()
@@ -38,9 +33,17 @@ export default function FindIdPage() {
     }
     setLoading(true); setError('')
     try {
-      const res = await mockFindId({ name, phone })
-      setResult(res)
-      if (!res.found) setError('입력하신 정보와 일치하는 계정을 찾을 수 없습니다.')
+      const data = await searchUserEmail(name, phone)
+
+      if (data?.email) {
+        // 이메일 마스킹: abc***@gmail.com 형태로 표시
+        const [id, domain] = data.email.split('@')
+        const masked = id.slice(0, 3) + '***@' + domain
+        setResult({ found: true, email: masked })
+      } else {
+        setResult({ found: false })
+        setError('입력하신 정보와 일치하는 계정을 찾을 수 없습니다.')
+      }
     } catch {
       setError('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
     } finally {

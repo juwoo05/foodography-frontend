@@ -72,6 +72,17 @@ export async function sessionCheck() {
   return res.data  // { email, existYn: 'Y' } 또는 { existYn: 'N' }
 }
 
+// ── 아이디(이메일) 찾기 ──────────────────────────
+export async function searchUserEmail(userName, phoneNum) {
+  const res = await userApi.post(
+      '/api/user/searchUserEmail',
+      new URLSearchParams({ userName, phoneNum })
+  )
+  return res.data
+  // 찾으면: { email: 'xxx@xxx.com', userName: '...', phoneNum: '...' }
+  // 못 찾으면: { email: null } 또는 빈 객체
+}
+
 // ── 로그아웃 ─────────────────────────────────────
 export async function logoutUser() {
   const res = await userApi.post(
