@@ -83,6 +83,15 @@ export async function searchUserEmail(userName, phoneNum) {
   // 못 찾으면: { email: null } 또는 빈 객체
 }
 
+// ── 비밀번호 재설정 ──────────────────────────────
+export async function updatePassword(email, password) {
+  const res = await userApi.post(
+      '/api/user/updatePassword',
+      new URLSearchParams({ email, password })
+  )
+  return res.data
+}
+
 // ── 로그아웃 ─────────────────────────────────────
 export async function logoutUser() {
   const res = await userApi.post(
