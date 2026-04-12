@@ -1,8 +1,8 @@
 import React, { useCallback, useRef, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Upload, Camera, ArrowRight } from 'lucide-react'
+import { Upload, Camera } from 'lucide-react'
 import { useAppStore } from '../store/appStore'
-import { analyzeImage, MOCK_ANALYSIS } from '../utils/api'
+import { getPresignedUrl, uploadToS3 } from '../utils/api'
 import styles from './UploadPage.module.css'
 
 const USE_MOCK = true
@@ -68,17 +68,30 @@ export default function UploadPage() {
 
     try {
       setIsAnalyzing(true)
-      const result = USE_MOCK
-        ? await new Promise(r => setTimeout(() => r(MOCK_ANALYSIS), 1800))
-        : await analyzeImage(file)
+
+      // ── ① Spring에 Presigned URL 요청 ──
+      const { url: uploadUrl, filename: s3Key } = await getPresignedUrl(file.name)
+      // uploadUrl: S3에 PUT할 주소
+      // s3Key: 나중에 어떤 파일인지 참조할 경로 (선택적 활용)
+
+      // ── ② S3에 이미지 직접 업로드 ──
+      await uploadToS3(uploadUrl, file)
+
+      // ── ③ (선택) Spring에 분석 요청 ──
+      // s3Key를 넘겨서 "이 파일 분석해줘" 요청 가능
+      // const result = await analyzeImage(s3Key)
+      // 지금은 Mock 사용
+      const result = await new Promise(r => setTimeout(() => r(MOCK_ANALYSIS), 800))
+
       clearInterval(tick)
       setProgress(100)
       setAnalysisResult(result)
-      await new Promise(r => setTimeout(r, 400)) // 100% 잠깐 보여주기
+      await new Promise(r => setTimeout(r, 400))
       navigate('/analyze')
+
     } catch (e) {
       clearInterval(tick)
-      setError(`분석 중 오류가 발생했어요: ${e.message}`)
+      setError(`업로드 중 오류가 발생했어요: ${e.message}`)
       setUploading(false)
       setIsAnalyzing(false)
       setPreview(null)

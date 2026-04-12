@@ -101,6 +101,29 @@ export async function logoutUser() {
   return res.data
 }
 
+// ── S3 Presigned URL 발급 요청 ──────────────────────────────
+// Spring에게 "이 파일 이름으로 업로드할 URL 줘" 요청
+export async function getPresignedUrl(filename) {
+  const res = await userApi.get('/api/images/my-fridge-input', {
+    params: { filename },   // GET ?filename=xxx.jpg
+  })
+  return res.data
+  // 응답 예시: { uploadUrl: "https://s3.amazonaws.com/...", s3Key: "images/uuid_xxx.jpg" }
+}
+
+// ── S3에 이미지 직접 업로드 (Presigned URL 사용) ────────────
+// Spring을 거치지 않고 S3에 직접 PUT 요청
+export async function uploadToS3(presignedUrl, file) {
+  // axios 인스턴스(userApi) 사용 X → 직접 S3에 보내므로 별도 axios 사용
+  const res = await axios.put(presignedUrl, file, {
+    headers: {
+      'Content-Type': file.type,  // 예: 'image/jpeg'
+    },
+    // withCredentials: false → S3는 쿠키 불필요
+  })
+  return res  // 성공 시 status 200
+}
+
 // ── 냉장고 분석 ──────────────────────────────────────
 export async function analyzeImage(file) {
   const form = new FormData()

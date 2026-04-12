@@ -13,20 +13,12 @@ const PW_RULES = [
   { label: '숫자 포함', test: pw => /[0-9]/.test(pw) },
 ]
 
-// ── 가짜 중복 이메일 목록 ────────────────────────────────────────────
-const EXISTING_EMAILS = ['jijuwoo@gmail.com']
-
 // ── 전화번호 자동 하이픈 포매터 ─────────────────────────────────────
 function formatPhone(val) {
   const digits = val.replace(/\D/g, '').slice(0, 11)
   if (digits.length < 4) return digits
   if (digits.length < 8) return digits.slice(0,3) + '-' + digits.slice(3)
   return digits.slice(0,3) + '-' + digits.slice(3,7) + '-' + digits.slice(7)
-}
-
-// ── 가짜 인증코드 발급 ───────────────────────────────────────────────
-function generateCode() {
-  return String(Math.floor(100000 + Math.random() * 900000))
 }
 
 // ── 카운트다운 훅 ────────────────────────────────────────────────────

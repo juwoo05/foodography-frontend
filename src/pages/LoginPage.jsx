@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { Eye, EyeOff, Mail, Lock, AlertCircle, ArrowRight } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import Navbar from '../components/layout/Navbar'
 import ValidationModal from '../components/ui/ValidationModal'
 import styles from './AuthPage.module.css'
-import { loginUser } from '../utils/api'
 
 export default function LoginPage() {
   const navigate = useNavigate()
