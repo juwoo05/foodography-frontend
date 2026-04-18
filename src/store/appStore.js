@@ -30,10 +30,57 @@ export const useAppStore = create((set, get) => ({
   // Actions
   setUploadedImage: (image, file) => set({ uploadedImage: image, uploadedFile: file }),
 
-  setAnalysisResult: (result) => set({
-    analysisResult: result,
-    correctedIngredients: result?.ingredients?.map((ing, i) => ({ ...ing, id: i })) ?? [],
-  }),
+  // FastAPI 응답 구조:
+  // {
+  //   success, detected_count,
+  //   ingredients: [{ idx, label, name, confidence, unit, stock_status, freshness, note, polygon }]
+  // }
+  //
+  // 매핑 규칙:
+  //   id          ← idx (Roboflow 감지 순번, 고정값)
+  //   quantity    ← 식품명이 같은 항목 수 집계 (숫자)
+  //   stockStatus ← stock_status (Gemini 재고 상태 텍스트: 많음/보통/적음)
+  //   polygon     ← Roboflow 폴리곤 좌표 [{ x, y }, ...]
+  setAnalysisResult: (result) => {
+
+    // 식품명 기준 수량 집계 (같은 이름이 여러 번 감지된 경우 quantity 누적)
+    const nameCountMap = {}
+    result?.ingredients?.forEach(ing => {
+      const key = ing.name ?? ing.label
+      nameCountMap[key] = (nameCountMap[key] ?? 0) + 1
+    })
+
+    // 이미 처리한 이름 추적 (첫 등장 항목만 남기고 나머지는 수량에 반영)
+    const seenNames = {}
+
+    const mapped = result?.ingredients
+      ?.filter(ing => {
+        const key = ing.name ?? ing.label
+        if (seenNames[key]) return false   // 중복 항목 제거 (수량에 이미 반영됨)
+        seenNames[key] = true
+        return true
+      })
+      ?.map(ing => ({
+        ...ing,
+        id:          ing.idx,                              // Roboflow 순번을 id로 사용
+        quantity:    nameCountMap[ing.name ?? ing.label],  // 같은 이름 감지 횟수 = 수량
+        unit:        ing.unit        ?? '개',
+        stockStatus: ing.stock_status ?? '알 수 없음',     // Gemini 재고 상태 텍스트
+        freshness:   ing.freshness   ?? '알 수 없음',
+        note:        ing.note        ?? null,
+        polygon:     ing.polygon     ?? [],                // Roboflow 폴리곤 좌표
+      })) ?? []
+
+    // ★ 로그 2: 매핑 후 polygon 존재 여부
+    console.log('[Store] correctedIngredients polygon check:',
+        mapped.map(m => ({ name: m.name, polygonLen: m.polygon?.length ?? 0, polygon: m.polygon }))
+    )
+
+    set({
+      analysisResult: result,
+      correctedIngredients: mapped,
+    })
+  },
 
   setIsAnalyzing: (v) => set({ isAnalyzing: v }),
   setAnalysisError: (e) => set({ analysisError: e }),
@@ -59,7 +106,6 @@ export const useAppStore = create((set, get) => ({
   setSelectedRecipe: (recipe) => set({ selectedRecipe: recipe }),
   setIsLoadingRecipes: (v) => set({ isLoadingRecipes: v }),
 
-  // 장바구니에 단일 항목 추가 (중복 시 수량 누적)
   addToCart: (item) => set((state) => {
     const exists = state.cartItems.find((c) => c.id === item.id)
     if (exists) {
@@ -74,13 +120,11 @@ export const useAppStore = create((set, get) => ({
     return { cartItems: [...state.cartItems, { ...item, quantity: item.quantity ?? 1 }] }
   }),
 
-  // 레시피의 missingIngredients 전체를 장바구니에 추가
-  // cartMap: { [name]: quantity } — 모달에서 조절한 수량
   addMissingToCart: (missingIngredients, cartMap, recipeTitle) => set((state) => {
     let next = [...state.cartItems]
     missingIngredients.forEach((item) => {
       const qty = cartMap[item.name] ?? 1
-      if (qty <= 0) return                          // 수량 0은 담지 않음
+      if (qty <= 0) return
       const id = `missing-${item.name}`
       const exists = next.find((c) => c.id === id)
       if (exists) {

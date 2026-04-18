@@ -132,6 +132,7 @@ export async function analyzeImage(savedFilename) {
       null,                          // body 없음
       { params: { filename: savedFilename } }   // GET 파라미터로 전달
   )
+  console.log('[API] analyzeImage raw response:', JSON.stringify(res.data, null, 2))
   return res.data
   // 응답 예시:
   // {

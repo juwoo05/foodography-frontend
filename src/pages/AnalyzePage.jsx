@@ -1,10 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '../store/appStore'
-import { MOCK_RECIPES } from '../utils/api'
+import { fetchRecipes } from '../utils/api'
 import styles from './AnalyzePage.module.css'
-
-const USE_MOCK = true
 
 // ── 이모지 매핑 ────────────────────────────────────────────────────────
 const EMOJI_MAP = {
@@ -33,20 +31,53 @@ const DEFAULT_SEASONINGS = [
 ]
 
 // ── Canvas 유틸 ────────────────────────────────────────────────────────
-function roundRect(ctx, x, y, w, h, r) {
-    ctx.beginPath()
-    ctx.moveTo(x + r, y)
-    ctx.lineTo(x + w - r, y)
-    ctx.quadraticCurveTo(x + w, y, x + w, y + r)
-    ctx.lineTo(x + w, y + h - r)
-    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
-    ctx.lineTo(x + r, y + h)
-    ctx.quadraticCurveTo(x, y + h, x, y + h - r)
-    ctx.lineTo(x, y + r)
-    ctx.quadraticCurveTo(x, y, x + r, y)
-    ctx.closePath()
+
+/**
+ * 폴리곤 좌표를 canvas 해상도에 맞게 스케일 변환
+ * Roboflow 좌표는 원본 이미지 픽셀 기준 → canvas에 렌더링된 이미지 영역 기준으로 변환
+ *
+ * @param {Array<{x,y}>} polygon  원본 픽셀 좌표
+ * @param {number} ox             canvas 내 이미지 시작 x (letterbox offset)
+ * @param {number} oy             canvas 내 이미지 시작 y
+ * @param {number} scale          이미지 렌더 스케일 (canvas/원본)
+ * @returns {Array<{x,y}>}        canvas 픽셀 좌표
+ */
+function scalePolygon(polygon, ox, oy, scale) {
+    return polygon.map(p => ({
+        x: ox + p.x * scale,
+        y: oy + p.y * scale,
+    }))
 }
 
+/**
+ * 폴리곤의 AABB(축 정렬 바운딩박스) 계산 — 레이블·번호 위치 산출용
+ */
+function polygonBounds(pts) {
+    const xs = pts.map(p => p.x)
+    const ys = pts.map(p => p.y)
+    const x = Math.min(...xs), y = Math.min(...ys)
+    return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y }
+}
+
+/**
+ * 점(px, py)이 폴리곤 내부인지 판정 (Ray casting)
+ * getHit() 클릭/호버 판정에 사용
+ */
+function pointInPolygon(px, py, pts) {
+    let inside = false
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+        const xi = pts[i].x, yi = pts[i].y
+        const xj = pts[j].x, yj = pts[j].y
+        if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) {
+            inside = !inside
+        }
+    }
+    return inside
+}
+
+/**
+ * 이미지 없을 때 배경 — 폴리곤 중심에 이모지 표시
+ */
 function drawFridgeBg(ctx, W, H, ingredients) {
     const grad = ctx.createLinearGradient(0, 0, 0, H)
     grad.addColorStop(0, '#1a2436')
@@ -65,61 +96,150 @@ function drawFridgeBg(ctx, W, H, ingredients) {
 
     const BG_COLORS = ['#2d5a27','#7d3a1e','#6b5a2d','#3a3a20','#1e3a5a','#5a4a1e','#2a2a35','#3a1e1e']
     ingredients.forEach((ing, idx) => {
-        if (!ing.bbox) return
-        const { rx, ry, rw, rh } = ing.bbox
-        const x = rx * W, y = ry * H, w = rw * W, h = rh * H
+        // polygon 없으면 건너뜀
+        if (!ing.polygon?.length) return
+        const pts = ing.polygon
+
         ctx.fillStyle = BG_COLORS[idx % BG_COLORS.length] + '88'
-        ctx.beginPath(); roundRect(ctx, x, y, w, h, 6); ctx.fill()
-        ctx.font = `${Math.min(w, h) * 0.55}px serif`
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+        ctx.beginPath()
+        ctx.moveTo(pts[0].x, pts[0].y)
+        pts.slice(1).forEach(p => ctx.lineTo(p.x, p.y))
+        ctx.closePath()
+        ctx.fill()
+
+        // 폴리곤 중심에 이모지 표시
+        const { x, y, w, h } = polygonBounds(pts)
+        const size = Math.min(w, h) * 0.55
+        ctx.font = `${size}px serif`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
         ctx.fillText(getEmoji(ing.name), x + w / 2, y + h / 2)
     })
 }
 
-function drawBBoxes(ctx, W, H, ingredients, focusedId) {
+// ── 세그멘테이션 팔레트 ──────────────────────────────────────────────────
+// SAM2 demo(facebookresearch/sam2)의 per-object hue 전략을 참고:
+// 객체 인덱스를 golden-angle(137.5°) 간격으로 hue 분산 → 인접 색상 충돌 최소화
+const GOLDEN_ANGLE = 137.508
+function objectHSL(idx, saturation = 70, lightness = 55) {
+    const hue = (idx * GOLDEN_ANGLE) % 360
+    return { h: hue, s: saturation, l: lightness }
+}
+function hslString({ h, s, l }, alpha = 1) {
+    return `hsla(${h.toFixed(1)},${s}%,${l}%,${alpha})`
+}
+
+/**
+ * SAM2 demo LayerCanvas 방식을 참고한 세그멘테이션 시각화
+ *
+ * 핵심 전략:
+ *   1. OffscreenCanvas(마스크 전용) 에 각 폴리곤을 단색으로 채운다.
+ *   2. 메인 ctx 에 globalAlpha + source-over 로 합성한다.
+ *      → 겹치는 마스크가 있어도 각 레이어가 독립적으로 블렌딩된다.
+ *   3. 외곽선(stroke)은 마스크 위에 별도 pass 로 그린다.
+ *      → stroke 가 마스크 fill 의 alpha 에 영향받지 않는다.
+ *   4. 레이블 + 번호 뱃지는 마지막 pass 로 그려 항상 최상위에 위치한다.
+ *
+ * 스케일링:
+ *   호출 전 getMappedIngredients() 에서 scalePolygon() 이 적용된 상태이므로
+ *   이 함수는 이미 canvas 픽셀 좌표로 변환된 pts 를 그대로 사용한다.
+ *
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {Array}  ingredients  polygon 이 canvas 픽셀 좌표로 변환된 식재료 목록
+ * @param {number|null} focusedId  현재 강조 중인 식재료 id
+ */
+function drawPolygons(ctx, ingredients, focusedId) {
+    const W = ctx.canvas.width
+    const H = ctx.canvas.height
+
+    // ── Pass 1: OffscreenCanvas 마스크 합성 ───────────────────────────────
+    // SAM2 demo 는 객체마다 독립 OffscreenCanvas 를 만들어 source-over 합성.
+    // 동일 패턴을 적용하되, OffscreenCanvas 미지원 환경(구형 브라우저)은
+    // createElement('canvas') 폴백으로 처리한다.
     ingredients.forEach((ing, i) => {
-        if (!ing.bbox) return
-        const { rx, ry, rw, rh } = ing.bbox
-        const x = rx * W, y = ry * H, w = rw * W, h = rh * H
+        if (!ing.polygon?.length) return
+        const pts       = ing.polygon
         const isFocused = focusedId === ing.id
-        const isOk = (ing.confidence ?? 1) >= 0.75
+        const isOk      = (ing.confidence ?? 1) >= 0.75
+        const color     = objectHSL(i)
 
+        // 오프스크린 캔버스 생성 — 마스크만 단색으로 그린다
+        let offscreen
+        try {
+            offscreen = new OffscreenCanvas(W, H)
+        } catch {
+            offscreen = Object.assign(document.createElement('canvas'), { width: W, height: H })
+        }
+        const oCtx = offscreen.getContext('2d')
+
+        // 폴리곤 경로 빌더 — 재사용
+        const buildPath = (c) => {
+            c.beginPath()
+            c.moveTo(pts[0].x, pts[0].y)
+            for (let k = 1; k < pts.length; k++) c.lineTo(pts[k].x, pts[k].y)
+            c.closePath()
+        }
+
+        // 마스크 fill: focused 시 불투명도를 높여 강조
+        const fillAlpha = isFocused ? 0.38 : 0.18
+        oCtx.fillStyle = hslString(color, fillAlpha)
+        buildPath(oCtx)
+        oCtx.fill()
+
+        // 오프스크린 → 메인 ctx 합성 (source-over, 불투명도 1)
+        ctx.drawImage(offscreen, 0, 0)
+
+        // ── Pass 2: 외곽선 — 메인 ctx 에 직접 그린다 ───────────────────────
+        // focused 시 glow shadow + 더 두꺼운 선
         if (isFocused) {
-            ctx.shadowBlur = 16
-            ctx.shadowColor = isOk ? 'rgba(46,204,113,0.6)' : 'rgba(243,156,18,0.6)'
+            ctx.shadowBlur  = 18
+            ctx.shadowColor = hslString(color, 0.75)
         }
-        ctx.lineWidth = isFocused ? 2.5 : 1.5
-        if (isOk) {
-            ctx.strokeStyle = isFocused ? '#2ECC71' : 'rgba(46,204,113,0.85)'
-            ctx.setLineDash([])
-        } else {
-            ctx.strokeStyle = isFocused ? '#F39C12' : 'rgba(243,156,18,0.85)'
-            ctx.setLineDash([5, 4])
-        }
-        ctx.beginPath(); roundRect(ctx, x, y, w, h, 5); ctx.stroke()
-        ctx.shadowBlur = 0; ctx.setLineDash([])
+        ctx.lineWidth   = isFocused ? 2.5 : 1.5
+        ctx.strokeStyle = isOk
+            ? hslString(color, isFocused ? 1 : 0.85)
+            : (isFocused ? '#F39C12' : 'rgba(243,156,18,0.85)')
+        ctx.setLineDash(isOk ? [] : [5, 4])
+        buildPath(ctx)
+        ctx.stroke()
+        ctx.shadowBlur = 0
+        ctx.setLineDash([])
+    })
 
-        ctx.fillStyle = isOk
-            ? (isFocused ? 'rgba(46,204,113,0.12)' : 'rgba(46,204,113,0.05)')
-            : (isFocused ? 'rgba(243,156,18,0.14)' : 'rgba(243,156,18,0.06)')
-        ctx.beginPath(); roundRect(ctx, x, y, w, h, 5); ctx.fill()
+    // ── Pass 3: 레이블 + 번호 뱃지 (항상 최상위) ─────────────────────────
+    ingredients.forEach((ing, i) => {
+        if (!ing.polygon?.length) return
+        const pts    = ing.polygon
+        const isOk   = (ing.confidence ?? 1) >= 0.75
+        const color  = objectHSL(i)
+        const { x, y, w } = polygonBounds(pts)
 
-        const labelH = 18
-        ctx.font = `bold 10px "Noto Sans KR", sans-serif`
+        // 레이블 배경
+        const labelH    = 18
         const labelText = `${ing.name}  ${Math.round((ing.confidence ?? 1) * 100)}%`
-        const labelW = Math.min(ctx.measureText(labelText).width + 10, w + 10)
-        const labelY = y - labelH < 2 ? y + 1 : y - labelH
-        ctx.fillStyle = isOk ? '#2ECC71' : '#F39C12'
-        ctx.beginPath(); roundRect(ctx, x, labelY, labelW, labelH, 3); ctx.fill()
-        ctx.fillStyle = '#0D1117'
-        ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
+        ctx.font        = `bold 10px "Noto Sans KR", sans-serif`
+        const labelW    = Math.min(ctx.measureText(labelText).width + 10, w + 10)
+        const labelY    = y - labelH < 2 ? y + 1 : y - labelH
+
+        ctx.fillStyle = isOk ? hslString(color) : '#F39C12'
+        ctx.beginPath()
+        ctx.roundRect(x, labelY, labelW, labelH, 3)
+        ctx.fill()
+
+        ctx.fillStyle    = '#0D1117'
+        ctx.textAlign    = 'left'
+        ctx.textBaseline = 'middle'
         ctx.fillText(labelText, x + 5, labelY + labelH / 2)
 
-        ctx.fillStyle = isOk ? '#2ECC71' : '#F39C12'
-        ctx.beginPath(); ctx.arc(x + w - 10, y + 10, 9, 0, Math.PI * 2); ctx.fill()
-        ctx.fillStyle = '#0D1117'
-        ctx.font = `bold 9px "Space Mono", monospace`
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+        // 번호 뱃지
+        ctx.fillStyle = isOk ? hslString(color) : '#F39C12'
+        ctx.beginPath()
+        ctx.arc(x + w - 10, y + 10, 9, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.fillStyle    = '#0D1117'
+        ctx.font         = `bold 9px "Space Mono", monospace`
+        ctx.textAlign    = 'center'
+        ctx.textBaseline = 'middle'
         ctx.fillText(i + 1, x + w - 10, y + 10)
     })
 }
@@ -135,7 +255,7 @@ export default function AnalyzePage() {
     const setRecipes       = useAppStore(s => s.setRecipes)
     const resetStore       = useAppStore(s => s.reset)
 
-    const [activePanel,  setActivePanel]  = useState('ingredients') // 'ingredients' | 'seasonings'
+    const [activePanel,  setActivePanel]  = useState('ingredients')
     const [focusedId,    setFocusedId]    = useState(null)
     const [zoom,         setZoom]         = useState(1)
     const [searchText,   setSearchText]   = useState('')
@@ -147,7 +267,6 @@ export default function AnalyzePage() {
     const [tooltip,      setTooltip]      = useState({ visible: false, x: 0, y: 0, name: '', conf: '' })
     const [editModal,    setEditModal]    = useState({ open: false, id: null, value: '' })
 
-    // 양념 체크 상태 (default: 전부 체크)
     const [seasoningChecks, setSeasoningChecks] = useState(
         () => Object.fromEntries(DEFAULT_SEASONINGS.map(s => [s.id, true]))
     )
@@ -169,6 +288,36 @@ export default function AnalyzePage() {
         img.src = uploadedImage
     }, [uploadedImage])
 
+    /**
+     * 이미지가 있을 때: Roboflow 원본 픽셀 좌표 → canvas 렌더 좌표로 변환
+     * Roboflow는 원본 이미지 픽셀 기준 좌표를 반환하므로
+     * canvas에 letterbox(ox, oy)로 그려진 이미지의 scale을 곱해야 정확히 겹침
+     */
+    const getMappedIngredients = useCallback((W, H) => {
+        if (!imgRef.current) return ingredients
+        const img   = imgRef.current
+        const scale = Math.min(W / img.naturalWidth, H / img.naturalHeight)
+        const ox    = (W - img.naturalWidth  * scale) / 2
+        const oy    = (H - img.naturalHeight * scale) / 2
+
+        const result = ingredients.map(ing => {
+            if (!ing.polygon?.length) return ing
+            return {
+                ...ing,
+                polygon: scalePolygon(ing.polygon, ox, oy, scale),
+            }
+        })
+
+        // ★ 로그 3: 스케일 변환 후 canvas 좌표
+        console.log(`[Canvas] W=${W} H=${H} scale=${scale.toFixed(3)} ox=${ox.toFixed(1)} oy=${oy.toFixed(1)}`)
+        console.log('[Canvas] scaled polygons:', result.map(r => ({
+            name: r.name,
+            pts: r.polygon?.slice(0, 3),  // 첫 3점만 — 콘솔 오염 방지
+        })))
+
+        return result
+    }, [ingredients])
+
     const renderCanvas = useCallback(() => {
         const canvas = canvasRef.current
         const ctr    = containerRef.current
@@ -185,31 +334,28 @@ export default function AnalyzePage() {
         ctx.translate(-W / 2, -H / 2)
 
         if (imgRef.current) {
-            const img = imgRef.current
+            const img   = imgRef.current
             const scale = Math.min(W / img.naturalWidth, H / img.naturalHeight)
-            const dw = img.naturalWidth * scale, dh = img.naturalHeight * scale
-            const ox = (W - dw) / 2, oy = (H - dh) / 2
+            const dw    = img.naturalWidth  * scale
+            const dh    = img.naturalHeight * scale
+            const ox    = (W - dw) / 2
+            const oy    = (H - dh) / 2
+
             ctx.drawImage(img, ox, oy, dw, dh)
             ctx.fillStyle = 'rgba(13,17,23,0.2)'
             ctx.fillRect(0, 0, W, H)
 
-            const mapped = ingredients.map(ing => {
-                if (!ing.bbox) return ing
-                const { rx, ry, rw, rh } = ing.bbox
-                return { ...ing, bbox: {
-                        rx: ox / W + rx * (dw / W),
-                        ry: oy / H + ry * (dh / H),
-                        rw: rw * (dw / W),
-                        rh: rh * (dh / H),
-                    }}
-            })
-            drawBBoxes(ctx, W, H, mapped, focusedId)
+            // 폴리곤 좌표를 canvas 렌더 좌표로 변환 후 그리기
+            const mapped = getMappedIngredients(W, H)
+            drawPolygons(ctx, mapped, focusedId)
         } else {
+            // 이미지 없을 때: 배경 + 폴리곤(원본 좌표 그대로)
             drawFridgeBg(ctx, W, H, ingredients)
-            drawBBoxes(ctx, W, H, ingredients, focusedId)
+            drawPolygons(ctx, ingredients, focusedId)
         }
+
         ctx.restore()
-    }, [ingredients, focusedId, zoom, uploadedImage])
+    }, [ingredients, focusedId, zoom, uploadedImage, getMappedIngredients])
 
     useEffect(() => { renderCanvas() }, [renderCanvas])
 
@@ -219,44 +365,36 @@ export default function AnalyzePage() {
         return () => ro.disconnect()
     }, [renderCanvas])
 
+    /**
+     * 클릭/호버 좌표가 어느 식재료 폴리곤 내부인지 판정
+     * Ray casting 알고리즘 사용
+     */
     const getHit = useCallback((clientX, clientY) => {
         const canvas = canvasRef.current
         if (!canvas) return null
         const rect = canvas.getBoundingClientRect()
-        const mx = clientX - rect.left, my = clientY - rect.top
-        const cx = (mx - canvas.width / 2) / zoom + canvas.width / 2
-        const cy = (my - canvas.height / 2) / zoom + canvas.height / 2
-        const W = canvas.width, H = canvas.height
 
+        // zoom 역변환으로 canvas 내 실제 좌표 계산
+        const mx = clientX - rect.left
+        const my = clientY - rect.top
+        const cx = (mx - canvas.width  / 2) / zoom + canvas.width  / 2
+        const cy = (my - canvas.height / 2) / zoom + canvas.height / 2
+
+        const mapped = getMappedIngredients(canvas.width, canvas.height)
         let hit = null
-        const list = getMappedList(W, H)
-        list.forEach(ing => {
-            if (!ing.bbox) return
-            const { rx, ry, rw, rh } = ing.bbox
-            const x = rx * W, y = ry * H, w = rw * W, h = rh * H
-            if (cx >= x && cx <= x + w && cy >= y && cy <= y + h) hit = ing
+        mapped.forEach(ing => {
+            if (!ing.polygon?.length) return
+            if (pointInPolygon(cx, cy, ing.polygon)) hit = ing
         })
         return hit
-    }, [zoom, ingredients, uploadedImage])
-
-    const getMappedList = (W, H) => {
-        if (!imgRef.current) return ingredients
-        const img = imgRef.current
-        const scale = Math.min(W / img.naturalWidth, H / img.naturalHeight)
-        const dw = img.naturalWidth * scale, dh = img.naturalHeight * scale
-        const ox = (W - dw) / 2, oy = (H - dh) / 2
-        return ingredients.map(ing => {
-            if (!ing.bbox) return ing
-            const { rx, ry, rw, rh } = ing.bbox
-            return { ...ing, bbox: { rx: ox/W + rx*(dw/W), ry: oy/H + ry*(dh/H), rw: rw*(dw/W), rh: rh*(dh/H) } }
-        })
-    }
+    }, [zoom, getMappedIngredients])
 
     const handleMouseMove = (e) => {
         const hit  = getHit(e.clientX, e.clientY)
         const rect = canvasRef.current?.getBoundingClientRect()
         if (hit && rect) {
-            setTooltip({ visible: true,
+            setTooltip({
+                visible: true,
                 x: e.clientX - rect.left + 12,
                 y: e.clientY - rect.top  - 40,
                 name: `${getEmoji(hit.name)} ${hit.name}`,
@@ -329,14 +467,23 @@ export default function AnalyzePage() {
         showNotif('🗑', `"${ing?.name}" 삭제됨`)
     }
 
+    /**
+     * 직접 추가 항목은 polygon 없이 생성
+     * canvas에서 폴리곤이 없으면 그리지 않고 리스트에만 표시됨
+     */
     const handleAddNew = () => {
         const newId = Date.now()
-        addIngredient({ id: newId, name: '새 재료', quantity: 1, unit: '개', confidence: 1.0,
-            bbox: { rx: 0.4, ry: 0.35, rw: 0.14, rh: 0.18 } })
+        addIngredient({
+            id:         newId,
+            name:       '새 재료',
+            quantity:   1,
+            unit:       '개',
+            confidence: 1.0,
+            polygon:    [],   // 직접 추가 항목은 폴리곤 없음
+        })
         setFocusedId(newId)
         setTimeout(() => {
-            const el = document.querySelector(`[data-nameid="${newId}"]`)
-            if (el) { el.focus(); el.select() }
+            openEditModal({ id: newId, name: '새 재료' })
         }, 50)
     }
 
@@ -354,9 +501,7 @@ export default function AnalyzePage() {
     const handleConfirm = async () => {
         setShowModal(false); setIsSubmitting(true)
         try {
-            const recipes = USE_MOCK
-                ? await new Promise(r => setTimeout(() => r(MOCK_RECIPES), 1200))
-                : await (await import('../utils/api')).fetchRecipes(ingredients)
+            const recipes = await fetchRecipes(ingredients)
             setRecipes(recipes); navigate('/recipes')
         } catch (e) {
             showNotif('⚠', '레시피 로딩 실패: ' + e.message)
@@ -365,7 +510,6 @@ export default function AnalyzePage() {
         }
     }
 
-    // ── 양념 체크 토글 ─────────────────────────────────────────────────
     const toggleSeasoning = (id) => {
         setSeasoningChecks(prev => {
             const next = { ...prev, [id]: !prev[id] }
@@ -378,12 +522,11 @@ export default function AnalyzePage() {
     const checkedCount   = Object.values(seasoningChecks).filter(Boolean).length
     const uncheckedCount = DEFAULT_SEASONINGS.length - checkedCount
 
-    // ── 통계 ───────────────────────────────────────────────────────────
-    const okList   = ingredients.filter(i => (i.confidence ?? 1) >= 0.75)
-    const warnList = ingredients.filter(i => (i.confidence ?? 1) < 0.75)
-    const total    = ingredients.length
-    const pct      = total ? Math.round(okList.length / total * 100) : 0
-    const filtered = ingredients.filter(i => i.name?.includes(searchText))
+    const okList       = ingredients.filter(i => (i.confidence ?? 1) >= 0.75)
+    const warnList     = ingredients.filter(i => (i.confidence ?? 1) < 0.75)
+    const total        = ingredients.length
+    const pct          = total ? Math.round(okList.length / total * 100) : 0
+    const filtered     = ingredients.filter(i => i.name?.includes(searchText))
     const filteredOk   = filtered.filter(i => (i.confidence ?? 1) >= 0.75)
     const filteredWarn = filtered.filter(i => (i.confidence ?? 1) < 0.75)
 
@@ -425,7 +568,7 @@ export default function AnalyzePage() {
                             <button className={`${styles.toolBtn} ${styles.toolActive}`} title="선택 모드">⊹</button>
                             <button className={styles.toolBtn} onClick={() => setZoom(z => Math.min(z + 0.2, 3))} title="확대">⊕</button>
                             <button className={styles.toolBtn} onClick={() => setZoom(z => Math.max(z - 0.2, 0.5))} title="축소">⊖</button>
-                            <button className={styles.toolBtn} onClick={handleAddNew} title="박스 추가">⊞</button>
+                            <button className={styles.toolBtn} onClick={handleAddNew} title="재료 추가">⊞</button>
                         </div>
                         <div className={styles.toolbarRight}>
                             <div className={styles.legendItem}>
@@ -475,7 +618,6 @@ export default function AnalyzePage() {
                 {/* ── RIGHT: LIST EDITOR ── */}
                 <div className={styles.listEditor}>
 
-                    {/* ── 패널 탭 전환 ── */}
                     <div className={styles.panelTabs}>
                         <button
                             className={`${styles.panelTab} ${activePanel === 'ingredients' ? styles.panelTabActive : ''}`}
@@ -613,6 +755,7 @@ export default function AnalyzePage() {
 
                             <div className={styles.ingList}>
                                 <div className={styles.sectionLabel}>기본 양념 체크리스트</div>
+
                                 {DEFAULT_SEASONINGS.map(s => {
                                     const checked = seasoningChecks[s.id]
                                     return (
@@ -640,7 +783,6 @@ export default function AnalyzePage() {
                                     )
                                 })}
 
-                                {/* 전체 토글 버튼 */}
                                 <div className={styles.seasoningBulkRow}>
                                     <button
                                         className={styles.btnGhost}
@@ -696,8 +838,8 @@ export default function AnalyzePage() {
                             총 <strong style={{ color: '#2ECC71' }}>{total}</strong>가지 식재료로<br />
                             요리 추천을 받아보시겠어요?<br /><br />
                             <span className={styles.modalNote}>
-                확인 필요 항목이 <strong style={{ color: '#F39C12' }}>{warnList.length}</strong>개 있습니다. 진행하시겠습니까?
-              </span>
+                                확인 필요 항목이 <strong style={{ color: '#F39C12' }}>{warnList.length}</strong>개 있습니다. 진행하시겠습니까?
+                            </span>
                         </div>
                         <div className={styles.modalActions}>
                             <button className={styles.btnGhost} onClick={() => setShowModal(false)}>취소</button>
@@ -769,7 +911,7 @@ function IngCard({ ing, isFocused, isWarn, onFocus, onEditOpen, onQty, onQtyDire
                 />
                 <button className={styles.qtyBtn} onClick={e => { e.stopPropagation(); onQty(1) }}>+</button>
             </div>
-            <span className={styles.unitText}>{ing.unit}</span>
+            <span className={styles.unitText}>{ing.unit ?? '개'}</span>
             <button className={styles.deleteBtn} onClick={e => { e.stopPropagation(); onDelete() }}>✕</button>
         </div>
     )
