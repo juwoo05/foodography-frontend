@@ -124,16 +124,26 @@ export async function uploadToS3(presignedUrl, file) {
   return res  // 성공 시 status 200
 }
 
-// ── 냉장고 분석 ──────────────────────────────────────
-export async function analyzeImage(file) {
-  const form = new FormData()
-  form.append('image', file)
-  const res = await fetch(`${BASE}/api/analyze`, {
-    method: 'POST',
-    body: form,
-  })
-  if (!res.ok) throw new Error(`분석 실패: HTTP ${res.status}`)
-  return res.json()
+// ── 냉장고 분석 (S3 업로드 완료 후 savedFilename 전달) ────────────────────
+// Spring Boot → FastAPI (Presigned Download URL + s3Key) → 분석 결과 반환
+export async function analyzeImage(savedFilename) {
+  const res = await userApi.post(
+      '/api/analyze',
+      null,                          // body 없음
+      { params: { filename: savedFilename } }   // GET 파라미터로 전달
+  )
+  return res.data
+  // 응답 예시:
+  // {
+  //   success: true,
+  //   detectedCount: 5,
+  //   ingredients: [
+  //     { idx: 0, label: "egg", name: "계란", confidence: 0.97,
+  //       freshness: "좋음", quantity: "보통", note: null },
+  //     ...
+  //   ],
+  //   errorMessage: null
+  // }
 }
 
 // ── 레시피 추천 ──────────────────────────────────────
