@@ -43,10 +43,18 @@ export const useAppStore = create((set, get) => ({
   //   polygon     ← Roboflow 폴리곤 좌표 [{ x, y }, ...]
   setAnalysisResult: (result) => {
 
+    const UNKNOWN = '알 수 없음'
+
+    const getGroupKey = (ing, index) => {
+      const name = ing.name ?? ing.label
+      // 알 수 없음은 개별 항목이므로 idx를 suffix로 붙여 유일키 생성
+      return name === UNKNOWN ? `${UNKNOWN}_${ing.idx ?? index}` : name
+    }
+
     // 식품명 기준 수량 집계 (같은 이름이 여러 번 감지된 경우 quantity 누적)
     const nameCountMap = {}
     result?.ingredients?.forEach(ing => {
-      const key = ing.name ?? ing.label
+      const key = getGroupKey(ing, ing.idx)
       nameCountMap[key] = (nameCountMap[key] ?? 0) + 1
     })
 
@@ -55,15 +63,16 @@ export const useAppStore = create((set, get) => ({
 
     const mapped = result?.ingredients
       ?.filter(ing => {
-        const key = ing.name ?? ing.label
+        const key = getGroupKey(ing, ing.idx)
         if (seenNames[key]) return false   // 중복 항목 제거 (수량에 이미 반영됨)
         seenNames[key] = true
         return true
       })
+
       ?.map(ing => ({
         ...ing,
         id:          ing.idx,                              // Roboflow 순번을 id로 사용
-        quantity:    nameCountMap[ing.name ?? ing.label],  // 같은 이름 감지 횟수 = 수량
+        quantity:    nameCountMap[getGroupKey(ing, ing.idx)],  // 같은 이름 감지 횟수 = 수량
         unit:        ing.unit        ?? '개',
         stockStatus: ing.stock_status ?? '알 수 없음',     // Gemini 재고 상태 텍스트
         freshness:   ing.freshness   ?? '알 수 없음',
