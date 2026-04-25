@@ -147,6 +147,34 @@ export async function analyzeImage(savedFilename) {
   // }
 }
 
+// ── 사용자 수정 식재료 결과 저장 (FOOD_AFTER) ────────────────────────────
+// correctedIngredients: appStore의 수정된 식재료 목록
+// analysisResult:       원본 분석 결과 (scanId 포함)
+export async function saveAfterResult(analysisResult, correctedIngredients) {
+  const ingredients = correctedIngredients.map(ing => ({
+    idx:          ing.id,
+    label:        ing.label        ?? '',
+    name:         ing.name         ?? '',
+    confidence:   ing.confidence   ?? 1.0,
+    freshness:    ing.freshness    ?? '알 수 없음',
+    quantity:     String(ing.quantity ?? 1),   // Java IngredientDTO.quantity 는 String
+    note:         ing.note         ?? null,
+    polygon:      ing.polygon      ?? [],
+    stock_status: ing.stockStatus  ?? '알 수 없음',
+  }))
+
+  const body = {
+    success:        analysisResult?.success       ?? true,
+    detectedCount:  analysisResult?.detectedCount ?? correctedIngredients.length,
+    ingredients,
+    errorMessage:   null,
+    scanId:         analysisResult?.scanId        ?? null,
+  }
+
+  const res = await userApi.post('/api/analyze/after', body)
+  return res.data  // { result: 1, msg: '저장 완료' }
+}
+
 // ── 레시피 추천 ──────────────────────────────────────
 export async function fetchRecipes(ingredients, filters = {}) {
   return request('/api/recipes', {

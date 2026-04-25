@@ -1,19 +1,60 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '../store/appStore'
-import { fetchRecipes } from '../utils/api'
+import { fetchRecipes, saveAfterResult } from '../utils/api'
 import styles from './AnalyzePage.module.css'
 
 // ── 이모지 매핑 ────────────────────────────────────────────────────────
-const EMOJI_MAP = {
-    '계란': '🍳', '달걀': '🍳', '우유': '🥛', '당근': '🥕', '두부': '🫙',
-    '대파': '🌿', '양파': '🧅', '마늘': '🧄', '감자': '🥔', '토마토': '🍅',
-    '브로콜리': '🥦', '치즈': '🧀', '버터': '🧈', '돼지고기': '🥩',
-    '소고기': '🥩', '닭고기': '🍗', '새우': '🍤', '고추': '🌶️',
-}
+// keywords 중 하나라도 식품명에 포함되면 매칭 (순서 = 우선순위)
+const EMOJI_TABLE = [
+    { emoji: '🥚', keywords: ['계란', '달걀', '에그'] },
+    { emoji: '🥛', keywords: ['우유', '밀크', '두유', '귀리유'] },
+    { emoji: '🧀', keywords: ['치즈'] },
+    { emoji: '🧈', keywords: ['버터', '마가린'] },
+    { emoji: '🥕', keywords: ['당근'] },
+    { emoji: '🧅', keywords: ['양파'] },
+    { emoji: '🧄', keywords: ['마늘'] },
+    { emoji: '🥔', keywords: ['감자'] },
+    { emoji: '🍠', keywords: ['고구마'] },
+    { emoji: '🍅', keywords: ['토마토'] },
+    { emoji: '🥦', keywords: ['브로콜리'] },
+    { emoji: '🥬', keywords: ['대파', '쪽파', '파', '상추', '깻잎', '시금치', '배추', '양배추'] },
+    { emoji: '🥒', keywords: ['오이', '호박', '주키니'] },
+    { emoji: '🍆', keywords: ['가지'] },
+    { emoji: '🌽', keywords: ['옥수수', '콘'] },
+    { emoji: '🍄', keywords: ['버섯', '표고', '느타리', '팽이'] },
+    { emoji: '🫘', keywords: ['두부', '콩', '청국장', '된장'] },
+    { emoji: '🌶️', keywords: ['고추', '파프리카', '피망'] },
+    { emoji: '🥩', keywords: ['소고기', '돼지고기', '삼겹살', '목살', '갈비', '스테이크', '육'] },
+    { emoji: '🍗', keywords: ['닭고기', '치킨', '닭', '가금'] },
+    { emoji: '🥓', keywords: ['베이컨', '햄', '소시지', '핫도그'] },
+    { emoji: '🐟', keywords: ['생선', '연어', '고등어', '참치', '광어', '조기', '갈치', '명태'] },
+    { emoji: '🍤', keywords: ['새우', '오징어', '문어', '낙지', '조개', '굴', '홍합'] },
+    { emoji: '🍎', keywords: ['사과'] },
+    { emoji: '🍊', keywords: ['오렌지', '귤', '레몬', '라임'] },
+    { emoji: '🍌', keywords: ['바나나'] },
+    { emoji: '🍇', keywords: ['포도'] },
+    { emoji: '🍓', keywords: ['딸기'] },
+    { emoji: '🫐', keywords: ['블루베리'] },
+    { emoji: '🍑', keywords: ['복숭아', '자두'] },
+    { emoji: '🍋', keywords: ['레몬'] },
+    { emoji: '🥜', keywords: ['땅콩', '견과', '아몬드', '호두', '잣'] },
+    { emoji: '🍚', keywords: ['밥', '쌀', '현미'] },
+    { emoji: '🍜', keywords: ['면', '국수', '라면', '파스타', '우동', '소면'] },
+    { emoji: '🥫', keywords: ['통조림', '캔', '참치캔'] },
+    { emoji: '🧃', keywords: ['주스', '음료'] },
+    { emoji: '🥤', keywords: ['음료수', '콜라', '사이다'] },
+    { emoji: '🧂', keywords: ['소금', '설탕', '후추', '양념'] },
+    { emoji: '🛢️', keywords: ['기름', '올리브유', '식용유'] },
+    { emoji: '🍶', keywords: ['식초', '간장', '소스', '케첩'] },
+    { emoji: '🧊', keywords: ['얼음'] },
+]
+
 const getEmoji = (name) => {
-    for (const [k, v] of Object.entries(EMOJI_MAP)) {
-        if (name?.includes(k)) return v
+    if (!name) return '🥬'
+    const lower = name.toLowerCase()
+    for (const { emoji, keywords } of EMOJI_TABLE) {
+        if (keywords.some(k => lower.includes(k))) return emoji
     }
     return '🥬'
 }
@@ -96,24 +137,23 @@ function drawFridgeBg(ctx, W, H, ingredients) {
 
     const BG_COLORS = ['#2d5a27','#7d3a1e','#6b5a2d','#3a3a20','#1e3a5a','#5a4a1e','#2a2a35','#3a1e1e']
     ingredients.forEach((ing, idx) => {
-        // polygon 없으면 건너뜀
-        if (!ing.polygon?.length) return
-        const pts = ing.polygon
+        const allPts = ing.polygons?.length ? ing.polygons : (ing.polygon?.length ? [ing.polygon] : [])
+        if (!allPts.length) return
+        allPts.forEach(pts => {
+            ctx.fillStyle = BG_COLORS[idx % BG_COLORS.length] + '88'
+            ctx.beginPath()
+            ctx.moveTo(pts[0].x, pts[0].y)
+            pts.slice(1).forEach(p => ctx.lineTo(p.x, p.y))
+            ctx.closePath()
+            ctx.fill()
 
-        ctx.fillStyle = BG_COLORS[idx % BG_COLORS.length] + '88'
-        ctx.beginPath()
-        ctx.moveTo(pts[0].x, pts[0].y)
-        pts.slice(1).forEach(p => ctx.lineTo(p.x, p.y))
-        ctx.closePath()
-        ctx.fill()
-
-        // 폴리곤 중심에 이모지 표시
-        const { x, y, w, h } = polygonBounds(pts)
-        const size = Math.min(w, h) * 0.55
-        ctx.font = `${size}px serif`
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.fillText(getEmoji(ing.name), x + w / 2, y + h / 2)
+            const { x, y, w, h } = polygonBounds(pts)
+            const size = Math.min(w, h) * 0.55
+            ctx.font = `${size}px serif`
+            ctx.textAlign = 'center'
+            ctx.textBaseline = 'middle'
+            ctx.fillText(getEmoji(ing.name), x + w / 2, y + h / 2)
+        })
     })
 }
 
@@ -157,66 +197,64 @@ function drawPolygons(ctx, ingredients, focusedId) {
     // 동일 패턴을 적용하되, OffscreenCanvas 미지원 환경(구형 브라우저)은
     // createElement('canvas') 폴백으로 처리한다.
     ingredients.forEach((ing, i) => {
-        if (!ing.polygon?.length) return
-        const pts       = ing.polygon
+        const allPts  = ing.polygons?.length ? ing.polygons : (ing.polygon?.length ? [ing.polygon] : [])
+        if (!allPts.length) return
         const isFocused = focusedId === ing.id
         const isOk      = (ing.confidence ?? 1) >= 0.75
         const color     = objectHSL(i)
 
-        // 오프스크린 캔버스 생성 — 마스크만 단색으로 그린다
-        let offscreen
-        try {
-            offscreen = new OffscreenCanvas(W, H)
-        } catch {
-            offscreen = Object.assign(document.createElement('canvas'), { width: W, height: H })
-        }
-        const oCtx = offscreen.getContext('2d')
+        allPts.forEach(pts => {
+            let offscreen
+            try {
+                offscreen = new OffscreenCanvas(W, H)
+            } catch {
+                offscreen = Object.assign(document.createElement('canvas'), { width: W, height: H })
+            }
+            const oCtx = offscreen.getContext('2d')
 
-        // 폴리곤 경로 빌더 — 재사용
-        const buildPath = (c) => {
-            c.beginPath()
-            c.moveTo(pts[0].x, pts[0].y)
-            for (let k = 1; k < pts.length; k++) c.lineTo(pts[k].x, pts[k].y)
-            c.closePath()
-        }
+            const buildPath = (c) => {
+                c.beginPath()
+                c.moveTo(pts[0].x, pts[0].y)
+                for (let k = 1; k < pts.length; k++) c.lineTo(pts[k].x, pts[k].y)
+                c.closePath()
+            }
 
-        // 마스크 fill: focused 시 불투명도를 높여 강조
-        const fillAlpha = isFocused ? 0.38 : 0.18
-        oCtx.fillStyle = hslString(color, fillAlpha)
-        buildPath(oCtx)
-        oCtx.fill()
+            const fillAlpha = isFocused ? 0.38 : 0.18
+            oCtx.fillStyle = hslString(color, fillAlpha)
+            buildPath(oCtx)
+            oCtx.fill()
 
-        // 오프스크린 → 메인 ctx 합성 (source-over, 불투명도 1)
-        ctx.drawImage(offscreen, 0, 0)
+            ctx.drawImage(offscreen, 0, 0)
 
-        // ── Pass 2: 외곽선 — 메인 ctx 에 직접 그린다 ───────────────────────
-        // focused 시 glow shadow + 더 두꺼운 선
-        if (isFocused) {
-            ctx.shadowBlur  = 18
-            ctx.shadowColor = hslString(color, 0.75)
-        }
-        ctx.lineWidth   = isFocused ? 2.5 : 1.5
-        ctx.strokeStyle = isOk
-            ? hslString(color, isFocused ? 1 : 0.85)
-            : (isFocused ? '#F39C12' : 'rgba(243,156,18,0.85)')
-        ctx.setLineDash(isOk ? [] : [5, 4])
-        buildPath(ctx)
-        ctx.stroke()
-        ctx.shadowBlur = 0
-        ctx.setLineDash([])
+            // ── Pass 2: 외곽선 ───────────────────────────────────────────
+            if (isFocused) {
+                ctx.shadowBlur  = 18
+                ctx.shadowColor = hslString(color, 0.75)
+            }
+            ctx.lineWidth   = isFocused ? 2.5 : 1.5
+            ctx.strokeStyle = isOk
+                ? hslString(color, isFocused ? 1 : 0.85)
+                : (isFocused ? '#F39C12' : 'rgba(243,156,18,0.85)')
+            ctx.setLineDash(isOk ? [] : [5, 4])
+            buildPath(ctx)
+            ctx.stroke()
+            ctx.shadowBlur = 0
+            ctx.setLineDash([])
+        })
     })
 
     // ── Pass 3: 레이블 + 번호 뱃지 (항상 최상위) ─────────────────────────
     ingredients.forEach((ing, i) => {
-        if (!ing.polygon?.length) return
-        const pts    = ing.polygon
+        const allPts = ing.polygons?.length ? ing.polygons : (ing.polygon?.length ? [ing.polygon] : [])
+        if (!allPts.length) return
+        const pts    = allPts[0]   // 레이블은 첫 번째 폴리곤 기준
         const isOk   = (ing.confidence ?? 1) >= 0.75
         const color  = objectHSL(i)
         const { x, y, w } = polygonBounds(pts)
 
         // 레이블 배경
         const labelH    = 18
-        const labelText = `${ing.name}  ${Math.round((ing.confidence ?? 1) * 100)}%`
+        const labelText = ing.name
         ctx.font        = `bold 10px "Noto Sans KR", sans-serif`
         const labelW    = Math.min(ctx.measureText(labelText).width + 10, w + 10)
         const labelY    = y - labelH < 2 ? y + 1 : y - labelH
@@ -271,6 +309,8 @@ export default function AnalyzePage() {
         () => Object.fromEntries(DEFAULT_SEASONINGS.map(s => [s.id, true]))
     )
 
+    const analysisResult   = useAppStore(s => s.analysisResult)
+
     const canvasRef    = useRef(null)
     const containerRef = useRef(null)
     const imgRef       = useRef(null)
@@ -301,10 +341,11 @@ export default function AnalyzePage() {
         const oy    = (H - img.naturalHeight * scale) / 2
 
         const result = ingredients.map(ing => {
-            if (!ing.polygon?.length) return ing
+            if (!ing.polygon?.length && !ing.polygons?.length) return ing
             return {
                 ...ing,
-                polygon: scalePolygon(ing.polygon, ox, oy, scale),
+                polygon:  ing.polygon?.length  ? scalePolygon(ing.polygon, ox, oy, scale) : [],
+                polygons: (ing.polygons ?? []).map(p => scalePolygon(p, ox, oy, scale)),
             }
         })
 
@@ -383,8 +424,8 @@ export default function AnalyzePage() {
         const mapped = getMappedIngredients(canvas.width, canvas.height)
         let hit = null
         mapped.forEach(ing => {
-            if (!ing.polygon?.length) return
-            if (pointInPolygon(cx, cy, ing.polygon)) hit = ing
+            const allPts = ing.polygons?.length ? ing.polygons : (ing.polygon?.length ? [ing.polygon] : [])
+            if (allPts.some(pts => pointInPolygon(cx, cy, pts))) hit = ing
         })
         return hit
     }, [zoom, getMappedIngredients])
@@ -501,6 +542,12 @@ export default function AnalyzePage() {
     const handleConfirm = async () => {
         setShowModal(false); setIsSubmitting(true)
         try {
+            // 수정된 식재료 결과 FOOD_AFTER 저장 (실패해도 레시피 추천 진행)
+            try {
+                await saveAfterResult(analysisResult, ingredients)
+            } catch (e) {
+                console.error('[API] FOOD_AFTER 저장 실패:', e.message)
+            }
             const recipes = await fetchRecipes(ingredients)
             setRecipes(recipes); navigate('/recipes')
         } catch (e) {
@@ -898,7 +945,7 @@ function IngCard({ ing, isFocused, isWarn, onFocus, onEditOpen, onQty, onQtyDire
                     <span className={styles.ingNameEditHint}>✏️</span>
                 </div>
                 <div className={styles.ingMeta}>
-                    신뢰도 {Math.round((ing.confidence ?? 1) * 100)}% · {isWarn ? '수동 확인 권장' : '자동 인식'}
+                    {isWarn ? '⚠ 수동 확인 권장' : '✓ 인식 완료'}
                 </div>
             </div>
             <div className={styles.qtyControl}>
