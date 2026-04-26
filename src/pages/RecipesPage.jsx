@@ -272,7 +272,21 @@ function RecipeCard({ recipe, rank, isHovered, onMouseEnter, onMouseLeave, onPic
     >
       {/* 썸네일 */}
       <div className={styles.thumbWrap}>
-        <img src={recipe.thumbnail} alt={recipe.title} className={styles.thumb} loading="lazy" />
+        {recipe.thumbnail ? (
+          <img
+            src={recipe.thumbnail}
+            alt={recipe.title}
+            className={styles.thumb}
+            loading="lazy"
+            onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling.style.display = 'flex' }}
+          />
+        ) : null}
+        <div
+          className={styles.thumbFallback}
+          style={{ display: recipe.thumbnail ? 'none' : 'flex' }}
+        >
+          🍳
+        </div>
         {rank === 1 && <span className={styles.topBadge}>🏆 추천 1위</span>}
         {recipe.missingCount === 0 && <span className={styles.readyBadge}>✓ 바로 가능</span>}
       </div>

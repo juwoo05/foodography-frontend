@@ -286,6 +286,7 @@ function drawPolygons(ctx, ingredients, focusedId) {
 export default function AnalyzePage() {
     const navigate = useNavigate()
     const uploadedImage    = useAppStore(s => s.uploadedImage)
+    const analysisResult   = useAppStore(s => s.analysisResult)   // scanId 포함 원본 응답
     const ingredients      = useAppStore(s => s.correctedIngredients)
     const updateIngredient = useAppStore(s => s.updateIngredient)
     const removeIngredient = useAppStore(s => s.removeIngredient)
@@ -308,8 +309,6 @@ export default function AnalyzePage() {
     const [seasoningChecks, setSeasoningChecks] = useState(
         () => Object.fromEntries(DEFAULT_SEASONINGS.map(s => [s.id, true]))
     )
-
-    const analysisResult   = useAppStore(s => s.analysisResult)
 
     const canvasRef    = useRef(null)
     const containerRef = useRef(null)
@@ -542,14 +541,20 @@ export default function AnalyzePage() {
     const handleConfirm = async () => {
         setShowModal(false); setIsSubmitting(true)
         try {
-            // 수정된 식재료 결과 FOOD_AFTER 저장 (실패해도 레시피 추천 진행)
+            // STEP 1: 수정된 식재료 결과 FOOD_AFTER 저장 (실패해도 레시피 추천 진행)
             try {
                 await saveAfterResult(analysisResult, ingredients)
             } catch (e) {
                 console.error('[API] FOOD_AFTER 저장 실패:', e.message)
             }
-            const recipes = await fetchRecipes(ingredients)
-            setRecipes(recipes); navigate('/recipes')
+
+            // STEP 2: FOOD_AFTER 기반 레시피 추천 (scanId 전달)
+            const scanId = analysisResult?.scanId
+            if (!scanId) throw new Error('scanId가 없습니다. 이미지를 다시 분석해주세요.')
+
+            const recipes = await fetchRecipes(scanId)
+            setRecipes(recipes)
+            navigate('/recipes')
         } catch (e) {
             showNotif('⚠', '레시피 로딩 실패: ' + e.message)
         } finally {

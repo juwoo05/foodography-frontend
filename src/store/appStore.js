@@ -120,7 +120,26 @@ export const useAppStore = create((set, get) => ({
     ],
   })),
 
-  setRecipes: (recipes) => set({ recipes }),
+  // FastAPI RecipeItem → RecipesPage 필드명 매핑
+  // API (snake_case)       → 프론트엔드 (camelCase)
+  //   recipeId             → id
+  //   cooking_time         → cookTime
+  //   youtube_url_thumbnail → thumbnail
+  //   difficulty           → tags (배열로 래핑)
+  //   missingCount/extraCost/missingIngredients → 기본값 0 / []
+  setRecipes: (recipes) => {
+    const mapped = (recipes ?? []).map((r, idx) => ({
+      ...r,
+      id:                  r.recipeId            ?? idx + 1,
+      thumbnail:           r.youtube_url_thumbnail ?? null,
+      cookTime:            r.cooking_time         ?? 0,
+      tags:                r.difficulty           ? [r.difficulty] : [],
+      missingCount:        0,
+      extraCost:           0,
+      missingIngredients:  [],
+    }))
+    set({ recipes: mapped })
+  },
   setSelectedRecipe: (recipe) => set({ selectedRecipe: recipe }),
   setIsLoadingRecipes: (v) => set({ isLoadingRecipes: v }),
 

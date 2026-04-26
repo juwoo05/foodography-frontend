@@ -134,17 +134,6 @@ export async function analyzeImage(savedFilename) {
   )
   console.log('[API] analyzeImage raw response:', JSON.stringify(res.data, null, 2))
   return res.data
-  // 응답 예시:
-  // {
-  //   success: true,
-  //   detectedCount: 5,
-  //   ingredients: [
-  //     { idx: 0, label: "egg", name: "계란", confidence: 0.97,
-  //       freshness: "좋음", quantity: "보통", note: null },
-  //     ...
-  //   ],
-  //   errorMessage: null
-  // }
 }
 
 // ── 사용자 수정 식재료 결과 저장 (FOOD_AFTER) ────────────────────────────
@@ -171,16 +160,19 @@ export async function saveAfterResult(analysisResult, correctedIngredients) {
     scanId:         analysisResult?.scanId        ?? null,
   }
 
-  const res = await userApi.post('/api/analyze/after', body)
+  const res = await userApi.post('/api/analyze/reviewed', body)
   return res.data  // { result: 1, msg: '저장 완료' }
 }
 
 // ── 레시피 추천 ──────────────────────────────────────
-export async function fetchRecipes(ingredients, filters = {}) {
-  return request('/api/recipes', {
-    method: 'POST',
-    body: JSON.stringify({ ingredients, filters }),
-  })
+// FOOD_AFTER 저장된 식재료(scanId 기준) → Spring → FastAPI 레시피 분석
+export async function fetchRecipes(scanId) {
+  const res = await userApi.post(
+    '/api/analyze/recipe',
+    null,
+    { params: { scanId } }
+  )
+  return res.data  // List<RecipeDTO>
 }
 
 // ── 레시피 상세 ──────────────────────────────────────
