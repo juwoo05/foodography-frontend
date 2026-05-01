@@ -990,3 +990,52 @@
 }
 
 .ingNameDisplay:hover .ingNameEditHint { opacity: 1; }
+
+/* ── 처리 중 로딩 모달 ────────────────────────────────────────────────── */
+.loadingOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+.loadingModal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  background: #161B22;
+  border: 1px solid rgba(46, 204, 113, 0.2);
+  border-radius: 16px;
+  padding: 40px 52px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  animation: modalIn 0.25s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+.loadingSpinnerBig {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(46, 204, 113, 0.15);
+  border-top-color: #2ECC71;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.loadingTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #E6EDF3;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+
+.loadingDesc {
+  font-size: 13px;
+  color: #8B949E;
+  text-align: center;
+  line-height: 1.7;
+}

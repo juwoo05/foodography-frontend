@@ -532,12 +532,6 @@ export default function AnalyzePage() {
         showNotif('↺', '초기 분석 결과로 되돌렸습니다')
     }
 
-    const handleReanalyze = () => {
-        showNotif('🔄', 'AI가 재분석 중입니다...')
-        setAiDotColor('#F39C12')
-        setTimeout(() => { setAiDotColor('#2ECC71'); showNotif('✓', '재분석이 완료되었습니다') }, 2200)
-    }
-
     const handleConfirm = async () => {
         setShowModal(false); setIsSubmitting(true)
         try {
@@ -574,13 +568,15 @@ export default function AnalyzePage() {
     const checkedCount   = Object.values(seasoningChecks).filter(Boolean).length
     const uncheckedCount = DEFAULT_SEASONINGS.length - checkedCount
 
-    const okList       = ingredients.filter(i => (i.confidence ?? 1) >= 0.75)
-    const warnList     = ingredients.filter(i => (i.confidence ?? 1) < 0.75)
+    // "알 수 없음" 또는 이름 없는 항목은 신뢰도와 무관하게 확인 필요로 분류
+    const isUnknown    = (i) => !i.name || i.name === '알 수 없음'
+    const okList       = ingredients.filter(i => !isUnknown(i) && (i.confidence ?? 1) >= 0.75)
+    const warnList     = ingredients.filter(i =>  isUnknown(i) || (i.confidence ?? 1) < 0.75)
     const total        = ingredients.length
     const pct          = total ? Math.round(okList.length / total * 100) : 0
     const filtered     = ingredients.filter(i => i.name?.includes(searchText))
-    const filteredOk   = filtered.filter(i => (i.confidence ?? 1) >= 0.75)
-    const filteredWarn = filtered.filter(i => (i.confidence ?? 1) < 0.75)
+    const filteredOk   = filtered.filter(i => !isUnknown(i) && (i.confidence ?? 1) >= 0.75)
+    const filteredWarn = filtered.filter(i =>  isUnknown(i) || (i.confidence ?? 1) < 0.75)
 
     if (!uploadedImage && ingredients.length === 0) {
         return (
@@ -697,7 +693,6 @@ export default function AnalyzePage() {
                                     <span className={styles.editorTitle}>🥕 인식된 식재료</span>
                                     <span className={styles.totalCount}>({total}개)</span>
                                     <div className={styles.headerActions}>
-                                        <button className={styles.btnGhost} onClick={handleReanalyze}>🔄 재분석</button>
                                         <button className={styles.btnPrimary} onClick={() => setShowModal(true)}>분석 완료 →</button>
                                     </div>
                                 </div>
@@ -897,6 +892,17 @@ export default function AnalyzePage() {
                             <button className={styles.btnGhost} onClick={() => setShowModal(false)}>취소</button>
                             <button className={styles.btnPrimary} onClick={handleConfirm}>요리 추천 보기 →</button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── 처리 중 로딩 모달 ── */}
+            {isSubmitting && (
+                <div className={styles.loadingOverlay}>
+                    <div className={styles.loadingModal}>
+                        <div className={styles.loadingSpinnerBig} />
+                        <div className={styles.loadingTitle}>요리 추천 분석 중</div>
+                        <div className={styles.loadingDesc}>AI가 레시피를 찾고 있어요...<br />잠시만 기다려 주세요</div>
                     </div>
                 </div>
             )}

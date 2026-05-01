@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Upload, Camera, ArrowRight, Sparkles, ChefHat } from 'lucide-react'
+import { Upload, ArrowRight, Sparkles, ChefHat } from 'lucide-react'
 import styles from './HomePage.module.css'
 
 const RECENT_SCANS = [
@@ -105,13 +105,6 @@ export default function HomePage() {
               <Upload size={17} />
               사진 올리기
               <ArrowRight size={15} className={styles.ctaArrow} />
-            </button>
-            <button
-              className={styles.ctaGhost}
-              onClick={goUpload}
-            >
-              <Camera size={16} />
-              카메라 촬영
             </button>
           </div>
 

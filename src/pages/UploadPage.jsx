@@ -27,7 +27,6 @@ export default function UploadPage() {
   const fileRef    = useRef(null)
   const [dragging,  setDragging]  = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [progress,  setProgress]  = useState(0)
   const [error,     setError]     = useState(null)
   const [mounted,   setMounted]   = useState(false)
   const [preview,   setPreview]   = useState(null)
@@ -52,47 +51,31 @@ export default function UploadPage() {
     }
     setError(null)
     setUploading(true)
-    setProgress(0)
 
     const objectUrl = URL.createObjectURL(file)
     setPreview(objectUrl)
     setUploadedImage(objectUrl, file)
-
-    // 프로그레스 시뮬레이션
-    const tick = setInterval(() => {
-      setProgress(p => {
-        if (p >= 85) { clearInterval(tick); return p }
-        return p + Math.random() * 18
-      })
-    }, 200)
 
     try {
       setIsAnalyzing(true)
 
       // ── ① Spring에 Presigned URL 요청 ──
       const { url: uploadUrl, filename: s3Key } = await getPresignedUrl(file.name)
-      // uploadUrl: S3에 PUT할 주소
-      // s3Key: 나중에 어떤 파일인지 참조할 경로 (선택적 활용)
 
       // ── ② S3에 이미지 직접 업로드 ──
       await uploadToS3(uploadUrl, file)
 
       // ── ③ Spring에 분석 요청 (s3Key 전달 → Spring → FastAPI 파이프라인 실행) ──
       const result = await analyzeImage(s3Key)
-      // result: { success, detectedCount, ingredients: [...], errorMessage }
 
       if (!result.success) {
         throw new Error(result.errorMessage || '분석에 실패했습니다.')
       }
 
-      clearInterval(tick)
-      setProgress(100)
       setAnalysisResult(result)
-      await new Promise(r => setTimeout(r, 400))
       navigate('/analyze')
 
     } catch (e) {
-      clearInterval(tick)
       setError(`업로드 중 오류가 발생했어요: ${e.message}`)
       setUploading(false)
       setIsAnalyzing(false)
@@ -232,45 +215,11 @@ export default function UploadPage() {
               </button>
             </>
           ) : (
-            /* ── 업로드 중 상태 ── */
-            <div className={styles.uploadingState}>
-              {preview && (
-                <div className={styles.previewWrap}>
-                  <img src={preview} alt="업로드 미리보기" className={styles.previewImg} />
-                  <div className={styles.scanLine} />
-                </div>
-              )}
-
-              <div className={styles.uploadingInfo}>
-                <div className={styles.uploadRingWrap}>
-                  <div className={styles.uploadRing} />
-                  <div className={styles.uploadRingInner} />
-                  <span className={styles.uploadPct}>{Math.round(Math.min(progress, 100))}%</span>
-                </div>
-
-                <p className={styles.uploadingTitle}>AI 분석 중...</p>
-                <p className={styles.uploadingSub}>식재료를 인식하고 있어요</p>
-
-                <div className={styles.progressBarWrap}>
-                  <div
-                    className={styles.progressBar}
-                    style={{ width: `${Math.min(progress, 100)}%` }}
-                  />
-                </div>
-
-                <div className={styles.uploadSteps}>
-                  {[
-                    { label: '이미지 수신', done: progress > 20 },
-                    { label: '식재료 탐지', done: progress > 55 },
-                    { label: '신뢰도 계산', done: progress > 85 },
-                  ].map((s, i) => (
-                    <div key={i} className={`${styles.uploadStep} ${s.done ? styles.uploadStepDone : ''}`}>
-                      <span className={styles.uploadStepDot} />
-                      {s.label}
-                    </div>
-                  ))}
-                </div>
-              </div>
+            /* ── 로딩 중 상태 ── */
+            <div className={styles.loadingState}>
+              <div className={styles.loadingSpinner} />
+              <p className={styles.loadingTitle}>AI 분석 중...</p>
+              <p className={styles.loadingSub}>식재료를 인식하고 있어요</p>
             </div>
           )}
         </main>
