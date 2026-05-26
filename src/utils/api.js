@@ -166,13 +166,40 @@ export async function saveAfterResult(analysisResult, correctedIngredients) {
 
 // ── 레시피 추천 ──────────────────────────────────────
 // FOOD_AFTER 저장된 식재료(scanId 기준) → Spring → FastAPI 레시피 분석
+// 응답: RecipeListDTO { recipes: RecipeDTO[] }
 export async function fetchRecipes(scanId) {
   const res = await userApi.post(
     '/api/analyze/recipe',
     null,
     { params: { scanId } }
   )
-  return res.data  // List<RecipeDTO>
+  return res.data?.recipes ?? []  // RecipeListDTO.recipes 언래핑
+}
+
+// ── 영상 요약 (레시피 선택 후) ────────────────────────
+// youtube_url + scanId → Spring → FastAPI → Gemini 영상 분석
+// 응답: List<VideoSummaryDTO>  [{ stepName, description, startSeconds, endSeconds, displayTime }]
+export async function fetchVideoSummary(youtubeUrl, scanId) {
+  const res = await userApi.post(
+    '/api/analyze/recipe/video-summary',
+    null,
+    { params: { youtube_url: youtubeUrl, scanId } }
+  )
+  return Array.isArray(res.data) ? res.data : []  // List<VideoSummaryDTO> 직접 반환
+}
+
+// ── 식품 영양 매칭 (Pinecone + Claude) ──────────────────────
+// 서버가 FOOD_AFTER 최신 scanId 기반으로 자동 처리
+// 동일 scanId 재요청 시 Redis 캐시에서 즉시 반환
+export async function matchIngredients() {
+  const res = await userApi.post('/api/food/match')
+  return res.data  // List<FoodDbDTO>
+}
+
+// ── 식품 DB 수동 인덱싱 트리거 ───────────────────────────────
+export async function indexFoodDatabase() {
+  const res = await userApi.post('/api/food/index')
+  return res.data  // { result: 1, msg: '식품 DB 인덱싱 완료' }
 }
 
 // ── 레시피 상세 ──────────────────────────────────────

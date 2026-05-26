@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Clock, ShoppingBag, Flame, ChevronRight, SlidersHorizontal, AlertCircle, ShoppingCart, X, Plus, Minus } from 'lucide-react'
 import { useAppStore } from '../store/appStore'
+import { fetchVideoSummary } from '../utils/api'
 import styles from './RecipesPage.module.css'
 
 const FILTERS = [
@@ -43,6 +44,27 @@ export default function RecipesPage() {
   const handlePickRecipe = (recipe) => {
     setSelectedRecipe(recipe)
     navigate('/cooking')
+
+    // ── 영상 요약 백그라운드 요청 ──────────────────────────────────────────
+    // navigate 후에도 Zustand store 업데이트는 정상 동작
+    if (recipe.youtube_url) {
+      console.log(
+        '[RecipesPage] 영상 요약 요청 시작 | title:', recipe.title,
+        '| scanId:', recipe.scanId,
+        '| url:', recipe.youtube_url,
+      )
+      fetchVideoSummary(recipe.youtube_url, recipe.scanId ?? '')
+        .then(steps => {
+          console.log('[RecipesPage] 영상 요약 수신 완료 | steps:', steps)
+          // CookingPage에서 recipe_video_summary 를 참조할 수 있도록 store 갱신
+          setSelectedRecipe({ ...recipe, recipe_video_summary: steps })
+        })
+        .catch(err => {
+          console.error('[RecipesPage] 영상 요약 실패:', err?.message ?? err)
+        })
+    } else {
+      console.warn('[RecipesPage] youtube_url 없음 — 영상 요약 스킵 | title:', recipe.title)
+    }
   }
 
   const handleViewShopping = (recipe, e) => {
@@ -322,7 +344,7 @@ function RecipeCard({ recipe, rank, isHovered, onMouseEnter, onMouseLeave, onPic
         )}
 
         <div className={styles.cardActions}>
-          <button className={styles.cookBtn} onClick={onPick}>
+          <button className={styles.cookBtn} onClick={e => { e.stopPropagation(); onPick() }}>
             요리 시작 <ChevronRight size={14} />
           </button>
           {recipe.missingCount > 0 && (

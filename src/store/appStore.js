@@ -121,22 +121,29 @@ export const useAppStore = create((set, get) => ({
   })),
 
   // FastAPI RecipeItem → RecipesPage 필드명 매핑
-  // API (snake_case)       → 프론트엔드 (camelCase)
-  //   recipeId             → id
-  //   cooking_time         → cookTime
-  //   youtube_url_thumbnail → thumbnail
-  //   difficulty           → tags (배열로 래핑)
-  //   missingCount/extraCost/missingIngredients → 기본값 0 / []
+  // API (snake_case)            → 프론트엔드 (camelCase)
+  //   recipeId                  → id
+  //   cooking_time              → cookTime
+  //   youtube_url_thumbnail     → thumbnail
+  //   difficulty                → tags (배열로 래핑)
+  //   additional_ingredients    → missingIngredients (name 문자열 → 객체 변환)
+  //                             → missingCount (길이)
   setRecipes: (recipes) => {
     const mapped = (recipes ?? []).map((r, idx) => ({
       ...r,
-      id:                  r.recipeId            ?? idx + 1,
-      thumbnail:           r.youtube_url_thumbnail ?? null,
-      cookTime:            r.cooking_time         ?? 0,
-      tags:                r.difficulty           ? [r.difficulty] : [],
-      missingCount:        0,
-      extraCost:           0,
-      missingIngredients:  [],
+      id:          r.recipeId             ?? idx + 1,
+      thumbnail:   r.youtube_url_thumbnail ?? null,
+      cookTime:    r.cooking_time          ?? 0,
+      tags:        r.difficulty            ? [r.difficulty] : [],
+      extraCost:   0,
+      // additional_ingredients: ["된장", "청양고추", ...] → missingIngredients 객체 배열
+      missingCount:       (r.additional_ingredients ?? []).length,
+      missingIngredients: (r.additional_ingredients ?? []).map(name => ({
+        name,
+        emoji: '🛒',
+        price: 0,
+        unit:  '개',
+      })),
     }))
     set({ recipes: mapped })
   },

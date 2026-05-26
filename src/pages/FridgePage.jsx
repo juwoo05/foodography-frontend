@@ -1,14 +1,10 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState } from 'react'
+import { matchIngredients, indexFoodDatabase } from '../utils/api'
 
 // ────────────────────────────────────────────
 //  Samsung Family Hub–inspired Fridge UI
-//  공공데이터 식품영양성분 API 연동
+//  Spring Boot /api/food/match · /api/food/index 연동
 // ────────────────────────────────────────────
-
-const SERVICE_KEY = '' // ← 발급받은 인증키로 교체하세요
-
-// 관리할 식재료 목록 (추가/삭제 가능)
-const DEFAULT_INGREDIENTS = ['당근', '계란', '브로콜리', '닭가슴살', '우유']
 
 // 영양소별 색상
 const NUTRIENT_COLORS = {
@@ -24,16 +20,13 @@ const ZONES = ['채소·과일', '육류·수산', '유제품·계란', '가공�
 
 export default function FridgePage() {
   const [mounted, setMounted]           = useState(false)
-  const [ingredients, setIngredients]   = useState(DEFAULT_INGREDIENTS)
   const [data, setData]                 = useState([])
   const [loading, setLoading]           = useState(false)
   const [error, setError]               = useState(null)
   const [selectedItem, setSelectedItem] = useState(null)
-  const [inputValue, setInputValue]     = useState('')
   const [activeTab, setActiveTab]       = useState('fridge') // fridge | nutrition | summary
   const [time, setTime]                 = useState(new Date())
-  const inputRef = useRef(null)
-
+  const [indexing, setIndexing]         = useState(false)
   // 시계 업데이트
   useEffect(() => {
     const t = setInterval(() => setTime(new Date()), 1000)
@@ -42,73 +35,53 @@ export default function FridgePage() {
 
   useEffect(() => {
     setTimeout(() => setMounted(true), 80)
-    fetchAll(DEFAULT_INGREDIENTS)
+    fetchAll()
   }, [])
 
-  // ── API 호출 ──────────────────────────────
-  const fetchNutrition = async (food) => {
-    const url =
-        `https://apis.data.go.kr/1471000/FoodNtrCpntDbInfo02/getFoodNtrCpntDbInq02` +
-        `?serviceKey=${SERVICE_KEY}&type=json&desc_kor=${encodeURIComponent(food)}&pageNo=1&numOfRows=5`
+  // ── FoodDbDTO → 화면용 객체 변환 ─────────────
+  const mapResult = (r) => ({
+    name:    r.ingredient,
+    dbName:  r.matchedFoodNm || r.ingredient,
+    kcal:    r.matchedKcal    ?? 0,
+    carb:    r.matchedCarbs   ?? 0,
+    protein: r.matchedProtein ?? 0,
+    fat:     r.matchedFat     ?? 0,
+    sugar:   0,   // 매칭 결과에 미포함
+    sodium:  0,   // 매칭 결과에 미포함
+    serving: '100g',
+    group:   '기타',
+  })
 
-    const res  = await fetch(url)
-    const json = await res.json()
-    const item = json?.body?.items?.[0]
-
-    if (!item) return null
-
-    return {
-      name:    food,
-      dbName:  item.DESC_KOR       || food,
-      kcal:    Number(item.NUTR_CONT1 || 0),
-      carb:    Number(item.NUTR_CONT2 || 0),
-      protein: Number(item.NUTR_CONT3 || 0),
-      fat:     Number(item.NUTR_CONT4 || 0),
-      sugar:   Number(item.NUTR_CONT5 || 0),
-      sodium:  Number(item.NUTR_CONT6 || 0),
-      serving: item.SERVING_SIZE    || '100g',
-      group:   item.FOOD_GROUP      || '기타',
-    }
-  }
-
-  const fetchAll = async (list) => {
+  // ── FOOD_AFTER 최신 분석 결과 매칭 (Redis 캐시 활용) ────
+  const fetchAll = async () => {
     setLoading(true)
     setError(null)
     try {
-      const results = await Promise.all(list.map(fetchNutrition))
-      setData(results.filter(Boolean))
+      const results = await matchIngredients()
+      setData(results.map(mapResult))
     } catch (e) {
       console.error(e)
-      setError('API 호출 중 오류가 발생했습니다. 인증키를 확인해주세요.')
-      // 오류 시 목(mock) 데이터로 폴백
-      setData(list.map((name, i) => ({
-        name,
-        dbName:  name,
-        kcal:    [41, 155, 34, 165, 61][i % 5],
-        carb:    [10, 1.1, 7, 0, 4.8][i % 5],
-        protein: [0.9, 13, 2.8, 31, 3.2][i % 5],
-        fat:     [0.2, 11, 0.4, 3.6, 3.3][i % 5],
-        sugar:   [5, 1, 1.7, 0, 5.1][i % 5],
-        sodium:  [69, 124, 33, 74, 44][i % 5],
-        serving: '100g',
-        group:   ZONES[i % ZONES.length],
-      })))
+      setError('영양 매칭 중 오류가 발생했습니다.')
     }
     setLoading(false)
   }
 
-  const addIngredient = () => {
-    const name = inputValue.trim()
-    if (!name || ingredients.includes(name)) return
-    const next = [...ingredients, name]
-    setIngredients(next)
-    fetchAll(next)
-    setInputValue('')
+  // ── 식품 DB 인덱싱 ────────────────────────────
+  const handleIndex = async () => {
+    if (indexing) return
+    setIndexing(true)
+    setError(null)
+    try {
+      const res = await indexFoodDatabase()
+      alert(res?.msg ?? '인덱싱 완료')
+    } catch (e) {
+      console.error(e)
+      setError('인덱싱 중 오류가 발생했습니다.')
+    }
+    setIndexing(false)
   }
 
   const removeIngredient = (name) => {
-    const next = ingredients.filter(n => n !== name)
-    setIngredients(next)
     setData(prev => prev.filter(d => d.name !== name))
     if (selectedItem?.name === name) setSelectedItem(null)
   }
@@ -172,17 +145,17 @@ export default function FridgePage() {
           {/* ════ 냉장고 탭 ════ */}
           {activeTab === 'fridge' && (
               <div style={css.fadeIn}>
-                {/* 식재료 추가 바 */}
+                {/* 액션 바 */}
                 <div style={css.addBar}>
-                  <input
-                      ref={inputRef}
-                      style={css.addInput}
-                      placeholder="식재료 이름 입력 (예: 두부)"
-                      value={inputValue}
-                      onChange={e => setInputValue(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && addIngredient()}
-                  />
-                  <button style={css.addBtn} onClick={addIngredient}>+ 추가</button>
+                  <button style={css.addBtn} onClick={fetchAll}>🔃 새로고침</button>
+                  <button
+                      style={{ ...css.addBtn, borderColor: '#4a7c5e', color: '#4a7c5e', opacity: indexing ? 0.5 : 1 }}
+                      onClick={handleIndex}
+                      disabled={indexing}
+                      title="식품 DB를 Pinecone에 인덱싱합니다 (최초 1회 또는 갱신 시 실행)"
+                  >
+                    {indexing ? '인덱싱 중…' : '🔄 DB 인덱싱'}
+                  </button>
                 </div>
 
                 {/* 냉장고 그리드 */}
