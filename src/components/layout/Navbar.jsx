@@ -36,7 +36,7 @@ export default function Navbar({ onMenuClick }) {
   const location  = useLocation()
   const cartItems = useAppStore(s => s.cartItems)
   const { user, logout } = useAuthStore()
-  const displayName = user?.email?.split('@')[0] ?? ''
+  const displayName = user?.userName ?? ''
 
   const [searchOpen,    setSearchOpen]    = useState(false)
   const [searchQuery,   setSearchQuery]   = useState('')

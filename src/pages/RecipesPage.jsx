@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Clock, ShoppingBag, Flame, ChevronRight, SlidersHorizontal, AlertCircle, ShoppingCart, X, Plus, Minus } from 'lucide-react'
+import { Clock, ShoppingBag, Flame, ChevronRight, SlidersHorizontal, AlertCircle, ShoppingCart, X, Plus, Minus, Youtube } from 'lucide-react'
 import { useAppStore } from '../store/appStore'
 import { fetchVideoSummary } from '../utils/api'
 import styles from './RecipesPage.module.css'
@@ -29,6 +29,8 @@ export default function RecipesPage() {
   const [hoveredId, setHoveredId] = useState(null)
   const [purchaseModal, setPurchaseModal] = useState({ open: false, recipe: null, cart: {} })
   const [successModal, setSuccessModal] = useState({ open: false, recipeName: '', itemCount: 0, totalCost: 0 })
+  // 영상 요약 로딩 오버레이
+  const [videoLoading, setVideoLoading] = useState({ active: false, title: '' })
 
   const sorted = useMemo(() => {
     if (!recipes.length) return []
@@ -41,29 +43,30 @@ export default function RecipesPage() {
     })
   }, [recipes, activeFilter])
 
-  const handlePickRecipe = (recipe) => {
+  const handlePickRecipe = async (recipe) => {
     setSelectedRecipe(recipe)
-    navigate('/cooking')
 
-    // ── 영상 요약 백그라운드 요청 ──────────────────────────────────────────
-    // navigate 후에도 Zustand store 업데이트는 정상 동작
-    if (recipe.youtube_url) {
-      console.log(
-        '[RecipesPage] 영상 요약 요청 시작 | title:', recipe.title,
-        '| scanId:', recipe.scanId,
-        '| url:', recipe.youtube_url,
-      )
-      fetchVideoSummary(recipe.youtube_url, recipe.scanId ?? '')
-        .then(steps => {
-          console.log('[RecipesPage] 영상 요약 수신 완료 | steps:', steps)
-          // CookingPage에서 recipe_video_summary 를 참조할 수 있도록 store 갱신
-          setSelectedRecipe({ ...recipe, recipe_video_summary: steps })
-        })
-        .catch(err => {
-          console.error('[RecipesPage] 영상 요약 실패:', err?.message ?? err)
-        })
-    } else {
+    // youtube_url 없으면 바로 이동
+    if (!recipe.youtube_url) {
       console.warn('[RecipesPage] youtube_url 없음 — 영상 요약 스킵 | title:', recipe.title)
+      navigate('/cooking')
+      return
+    }
+
+    // ── 영상 요약 대기 — 완료 후 CookingPage 진입 ─────────────────────────
+    setVideoLoading({ active: true, title: recipe.title })
+    console.log('[RecipesPage] 영상 요약 요청 시작 | title:', recipe.title, '| scanId:', recipe.scanId, '| url:', recipe.youtube_url)
+
+    try {
+      const steps = await fetchVideoSummary(recipe.youtube_url, recipe.scanId ?? '')
+      console.log('[RecipesPage] 영상 요약 수신 완료 | steps:', steps)
+      setSelectedRecipe({ ...recipe, recipe_video_summary: steps })
+    } catch (err) {
+      // 실패해도 CookingPage는 열어줌 (타임라인 없이)
+      console.error('[RecipesPage] 영상 요약 실패:', err?.message ?? err)
+    } finally {
+      setVideoLoading({ active: false, title: '' })
+      navigate('/cooking')
     }
   }
 
@@ -244,6 +247,31 @@ export default function RecipesPage() {
           </div>
         )
       })()}
+
+      {/* ── 영상 분석 로딩 오버레이 ── */}
+      {videoLoading.active && (
+        <div className={styles.videoLoadingOverlay}>
+          <div className={styles.videoLoadingCard}>
+            {/* 링 애니메이션 */}
+            <div className={styles.videoLoadingRingWrap}>
+              <div className={styles.videoLoadingRingOuter} />
+              <div className={styles.videoLoadingRingInner} />
+              <div className={styles.videoLoadingIconCenter}>
+                <Youtube size={22} className={styles.videoLoadingYtIcon} />
+              </div>
+            </div>
+
+            <div className={styles.videoLoadingTitle}>{videoLoading.title}</div>
+            <p className={styles.videoLoadingText}>YouTube 영상을 AI로 분석하고 있습니다</p>
+            <p className={styles.videoLoadingSub}>조리 단계를 타임라인으로 구성 중이에요 · 최대 90초 소요</p>
+
+            {/* 점 애니메이션 */}
+            <div className={styles.videoLoadingDots}>
+              <span /><span /><span />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── 장바구니 담기 성공 모달 ── */}
       {successModal.open && (

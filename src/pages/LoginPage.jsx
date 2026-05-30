@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import Navbar from '../components/layout/Navbar'
@@ -7,7 +7,9 @@ import ValidationModal from '../components/ui/ValidationModal'
 import styles from './AuthPage.module.css'
 
 export default function LoginPage() {
-  const navigate = useNavigate()
+  const navigate  = useNavigate()
+  const location  = useLocation()
+  const from      = location.state?.from?.pathname ?? '/'   // 원래 가려던 경로
   const { login, isLoading, error, clearError, user } = useAuthStore()
 
   const [email,     setEmail]     = useState()
@@ -45,7 +47,7 @@ export default function LoginPage() {
     }
     const result = await login(email, password)
     if (result.success) {
-      navigate('/')
+      navigate(from, { replace: true })  // 원래 가려던 페이지로 복귀
     }
   }
 

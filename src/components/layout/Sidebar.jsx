@@ -24,7 +24,7 @@ export default function Sidebar({ open, onClose }) {
   const reset     = useAppStore(s => s.reset)
   const cartItems = useAppStore(s => s.cartItems)
   const { user, logout } = useAuthStore()
-  const displayName = user?.email?.split('@')[0] ?? ''
+  const displayName = user?.userName ?? ''
 
   const handleLogout = async () => {
     await logout()
@@ -61,7 +61,7 @@ export default function Sidebar({ open, onClose }) {
             <User size={32} className={styles.avatar} />
             <div className={styles.userInfo}>
               <span className={styles.userName}>{displayName}</span>
-              <span className={styles.userEmail}>{user.email}</span>
+              <span className={styles.userEmail}>ID: {user.userId}</span>
             </div>
           </div>
         ) : (

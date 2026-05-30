@@ -3,14 +3,44 @@ import axios from 'axios'
 // Base URL — set via .env: VITE_API_BASE=http://localhost:8080
 const BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080'
 
-// axios 인스턴스 — 회원/인증 관련 요청에만 사용
+// axios 인스턴스 — 모든 API 요청에 사용
+// withCredentials: true → HttpOnly JWT 쿠키를 자동으로 요청에 포함
 const userApi = axios.create({
   baseURL: BASE,
-  withCredentials: true,  // 세션 쿠키 포함 — 필수!
+  withCredentials: true,
 })
 
+// 401 전역 인터셉터 — 세션 중 토큰 만료 시 로그인 페이지로 이동
+//
+// 제외 대상: sessionCheck
+//   → 비로그인 상태에서 앱 시작 시 정상적으로 401이 오는 엔드포인트
+//   → authStore.checkSession() 의 catch 블록이 직접 처리 (user: null)
+//   → 인터셉터가 가로채면 비로그인 접속 시 무조건 /login 강제이동 발생
+userApi.interceptors.response.use(
+  res => res,
+  err => {
+    if (err.response?.status === 401) {
+      const url = err.config?.url ?? ''
+
+      // sessionCheck 는 401 이 "비로그인" 을 의미하는 정상 케이스 — 리다이렉트 제외
+      const isSessionCheck = url.includes('/api/user/sessionCheck')
+
+      // 로그인·회원가입 페이지에서 온 요청도 제외
+      const publicPaths = ['/login', '/signup', '/find-id', '/find-pw']
+      const isPublicPage = publicPaths.some(p => window.location.pathname.startsWith(p))
+
+      if (!isSessionCheck && !isPublicPage) {
+        window.location.href = '/login'
+      }
+    }
+    return Promise.reject(err)
+  }
+)
+
+// fetch 기반 요청 — withCredentials 에 해당하는 credentials: 'include' 추가
 async function request(path, options = {}) {
   const res = await fetch(`${BASE}${path}`, {
+    credentials: 'include',   // HttpOnly JWT 쿠키 포함
     headers: { 'Content-Type': 'application/json', ...options.headers },
     ...options,
   })
@@ -66,10 +96,11 @@ export async function loginUser(email, password) {
   return res.data  // { result: 1, msg: '로그인 성공했습니다.' }
 }
 
-// ── 세션 확인 ────────────────────────────────────
+// ── 토큰 유효성 확인 ─────────────────────────────
+// JWT 쿠키가 유효하면 서버가 클레임에서 사용자 정보 추출해 반환
 export async function sessionCheck() {
   const res = await userApi.get('/api/user/sessionCheck')
-  return res.data  // { email, existYn: 'Y' } 또는 { existYn: 'N' }
+  return res.data  // { userId, userName, existYn: 'Y' } 또는 401
 }
 
 // ── 아이디(이메일) 찾기 ──────────────────────────
@@ -166,14 +197,14 @@ export async function saveAfterResult(analysisResult, correctedIngredients) {
 
 // ── 레시피 추천 ──────────────────────────────────────
 // FOOD_AFTER 저장된 식재료(scanId 기준) → Spring → FastAPI 레시피 분석
-// 응답: RecipeListDTO { recipes: RecipeDTO[] }
+// 응답: List<RecipeDTO>
 export async function fetchRecipes(scanId) {
   const res = await userApi.post(
     '/api/analyze/recipe',
     null,
     { params: { scanId } }
   )
-  return res.data?.recipes ?? []  // RecipeListDTO.recipes 언래핑
+  return Array.isArray(res.data) ? res.data : []  // List<RecipeDTO> 직접 반환
 }
 
 // ── 영상 요약 (레시피 선택 후) ────────────────────────
