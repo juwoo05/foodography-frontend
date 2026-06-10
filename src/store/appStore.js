@@ -27,6 +27,10 @@ export const useAppStore = create((set, get) => ({
   timerRunning: false,
   timerSeconds: 0,
 
+  // Review
+  reviews: [],
+  myRecipes: [],
+
   // Actions
   setUploadedImage: (image, file) => set({ uploadedImage: image, uploadedFile: file }),
 
@@ -199,6 +203,9 @@ export const useAppStore = create((set, get) => ({
   setCurrentStep: (step) => set({ currentStep: step }),
   setTimerRunning: (v) => set({ timerRunning: v }),
   setTimerSeconds: (s) => set({ timerSeconds: s }),
+
+  setReviews:   (reviews)   => set({ reviews }),
+  setMyRecipes: (myRecipes) => set({ myRecipes }),
 
   reset: () => set({
     uploadedImage: null,

@@ -2,7 +2,7 @@ import React from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   Camera, ChefHat, ShoppingCart, BookOpen, Home,
-  RotateCcw, LogOut, LogIn, UserPlus, X,
+  LogOut, LogIn, UserPlus, X,
   Refrigerator, Star, User
 } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
@@ -21,7 +21,6 @@ const NAV_ITEMS = [
 
 export default function Sidebar({ open, onClose }) {
   const navigate  = useNavigate()
-  const reset     = useAppStore(s => s.reset)
   const cartItems = useAppStore(s => s.cartItems)
   const { user, logout } = useAuthStore()
   const displayName = user?.userName ?? ''
@@ -57,11 +56,15 @@ export default function Sidebar({ open, onClose }) {
 
         {/* 유저 카드 */}
         {user ? (
-          <div className={styles.userCard}>
+          <div
+            className={`${styles.userCard} ${styles.userCardClickable}`}
+            onClick={() => { navigate('/mypage'); onClose() }}
+            title="마이페이지"
+          >
             <User size={32} className={styles.avatar} />
             <div className={styles.userInfo}>
               <span className={styles.userName}>{displayName}</span>
-              <span className={styles.userEmail}>ID: {user.userId}</span>
+              <span className={styles.userEmail}>마이페이지 →</span>
             </div>
           </div>
         ) : (
@@ -102,9 +105,6 @@ export default function Sidebar({ open, onClose }) {
 
         {/* 하단 액션 */}
         <div className={styles.bottomActions}>
-          <button className={styles.actionBtn} onClick={() => { reset(); onClose() }}>
-            <RotateCcw size={15} /> 데이터 초기화
-          </button>
           {user && (
             <button className={`${styles.actionBtn} ${styles.actionBtnDanger}`} onClick={handleLogout}>
               <LogOut size={15} /> 로그아웃

@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 // Base URL — set via .env: VITE_API_BASE=http://localhost:8080
-const BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080'
+const BASE = import.meta.env.VITE_API_BASE ?? 'http://ridinggoat.kr'
 
 // axios 인스턴스 — 모든 API 요청에 사용
 // withCredentials: true → HttpOnly JWT 쿠키를 자동으로 요청에 포함
@@ -10,30 +10,63 @@ const userApi = axios.create({
   withCredentials: true,
 })
 
-// 401 전역 인터셉터 — 세션 중 토큰 만료 시 로그인 페이지로 이동
+// 401 전역 인터셉터 — AT 만료 시 RT로 자동 재발급 후 원 요청 재시도
 //
-// 제외 대상: sessionCheck
-//   → 비로그인 상태에서 앱 시작 시 정상적으로 401이 오는 엔드포인트
-//   → authStore.checkSession() 의 catch 블록이 직접 처리 (user: null)
-//   → 인터셉터가 가로채면 비로그인 접속 시 무조건 /login 강제이동 발생
+// 재발급 제외 URL:
+//   sessionCheck  → 비로그인 정상 케이스, authStore 가 직접 처리
+//   refresh       → 재발급 자체가 실패하면 무한 루프 방지
+//   loginProc     → 로그인 실패는 401이 아닌 result:0 으로 처리
+
+let _isRefreshing  = false
+let _refreshQueue  = []  // 재발급 대기 중인 요청들
+
+const _onRefreshed  = ()  => { _refreshQueue.forEach(r => r.resolve()); _refreshQueue = [] }
+const _onRefreshFail = () => { _refreshQueue.forEach(r => r.reject());  _refreshQueue = [] }
+
 userApi.interceptors.response.use(
   res => res,
-  err => {
-    if (err.response?.status === 401) {
-      const url = err.config?.url ?? ''
+  async err => {
+    const config    = err.config
+    const url       = config?.url ?? ''
+    const status    = err.response?.status
 
-      // sessionCheck 는 401 이 "비로그인" 을 의미하는 정상 케이스 — 리다이렉트 제외
-      const isSessionCheck = url.includes('/api/user/sessionCheck')
+    if (status !== 401) return Promise.reject(err)
 
-      // 로그인·회원가입 페이지에서 온 요청도 제외
-      const publicPaths = ['/login', '/signup', '/find-id', '/find-pw']
-      const isPublicPage = publicPaths.some(p => window.location.pathname.startsWith(p))
+    // 재발급 시도하지 않을 URL
+    const skipUrls = ['/api/user/sessionCheck', '/api/user/refresh', '/api/user/loginProc']
+    const isSkip   = skipUrls.some(u => url.includes(u))
 
-      if (!isSessionCheck && !isPublicPage) {
+    // 로그인·회원가입 페이지 요청도 제외
+    const publicPaths  = ['/login', '/signup', '/find-id', '/find-pw']
+    const isPublicPage = publicPaths.some(p => window.location.pathname.startsWith(p))
+
+    if (isSkip || isPublicPage) {
+      // sessionCheck·public 이외의 skip URL에서 401 → 로그인으로
+      if (!url.includes('/api/user/sessionCheck') && !isPublicPage) {
         window.location.href = '/login'
       }
+      return Promise.reject(err)
     }
-    return Promise.reject(err)
+
+    // 이미 재발급 진행 중이면 큐에 등록 후 대기
+    if (_isRefreshing) {
+      return new Promise((resolve, reject) => {
+        _refreshQueue.push({ resolve, reject })
+      }).then(() => userApi(config))
+    }
+
+    _isRefreshing = true
+    try {
+      await userApi.post('/api/user/refresh')  // RT 쿠키로 재발급
+      _onRefreshed()
+      _isRefreshing = false
+      return userApi(config)                   // 원 요청 재시도
+    } catch (refreshErr) {
+      _onRefreshFail()
+      _isRefreshing = false
+      window.location.href = '/login'          // RT도 만료 → 로그인
+      return Promise.reject(refreshErr)
+    }
   }
 )
 
@@ -171,8 +204,8 @@ export async function analyzeImage(savedFilename) {
 // correctedIngredients: appStore의 수정된 식재료 목록
 // analysisResult:       원본 분석 결과 (scanId 포함)
 export async function saveAfterResult(analysisResult, correctedIngredients) {
-  const ingredients = correctedIngredients.map(ing => ({
-    idx:          ing.id,
+  const ingredients = correctedIngredients.map((ing, i) => ({
+    idx:          typeof ing.id === 'number' ? ing.id : i,   // 's1' 같은 string ID → 배열 인덱스로 대체
     label:        ing.label        ?? '',
     name:         ing.name         ?? '',
     confidence:   ing.confidence   ?? 1.0,
@@ -231,6 +264,70 @@ export async function matchIngredients() {
 export async function indexFoodDatabase() {
   const res = await userApi.post('/api/food/index')
   return res.data  // { result: 1, msg: '식품 DB 인덱싱 완료' }
+}
+
+// ── 쇼핑 가이드 ──────────────────────────────────────────────────────────────
+
+// 최신 레시피의 추가 재료를 네이버 쇼핑 API 로 검색 (기본·최저가·최고가 각 1건)
+// 응답: List<IngredientSearchDTO> [{ ingredient, results: [ShoppingDTO...] }]
+export async function searchShopping() {
+  const res = await userApi.get('/api/shopping/search')
+  return Array.isArray(res.data) ? res.data : []
+}
+
+// 장바구니 항목 저장 (MYCART INSERT)
+// item: ShoppingDTO { ingredient, sortType, title, link, image, lprice, mallName, recipeId }
+export async function addToCart(item) {
+  const res = await userApi.post('/api/shopping/cart', item)
+  return res.data  // ShoppingDTO with cartId
+}
+
+// 장바구니 조회 — List<ShoppingDTO>
+export async function fetchCart() {
+  const res = await userApi.get('/api/shopping/cart')
+  return Array.isArray(res.data) ? res.data : []
+}
+
+// 장바구니 단일 항목 삭제
+export async function removeCartItem(cartId) {
+  await userApi.delete(`/api/shopping/cart/${cartId}`)
+}
+
+// 장바구니 전체 비우기
+export async function clearCartApi() {
+  await userApi.delete('/api/shopping/cart')
+}
+
+// ── 리뷰 ─────────────────────────────────────────────────────────────
+// 리뷰 작성 드롭다운용 — 내가 선택했던 레시피 목록 (RECIPE.USER_ID = 나)
+export async function fetchMyRecipes() {
+  const res = await userApi.get('/api/review/my-recipes')
+  return res.data  // [{ recipeId, title }, ...]
+}
+
+// 전체 리뷰 목록 조회 (작성자명 + 레시피명 포함)
+export async function fetchReviews() {
+  const res = await userApi.get('/api/review/list')
+  return res.data  // List<ReviewDTO>
+}
+
+// 리뷰 이미지 업로드용 Presigned URL + 퍼블릭 URL 발급
+export async function getReviewImageUploadUrl(filename) {
+  const res = await userApi.get('/api/images/review-upload', { params: { filename } })
+  return res.data  // { uploadUrl, publicUrl, s3Key }
+}
+
+// 리뷰 저장 (imageUrl 은 선택 — 사진 없으면 undefined)
+export async function submitReview(recipeId, rating, comment, imageUrl) {
+  const res = await userApi.post('/api/review', { recipeId, rating, comment, imageUrl })
+  return res.data  // { httpStatus, message, data: null }
+}
+
+// ── 마이페이지 ───────────────────────────────────────────────────────────
+// 유저 기본 정보 + 활동 통계 + 최근 레시피·리뷰
+export async function fetchMyPage() {
+  const res = await userApi.get('/api/mypage/profile')
+  return res.data  // MyPageDTO
 }
 
 // ── 레시피 상세 ──────────────────────────────────────
@@ -310,59 +407,42 @@ export const MOCK_RECIPES = [
 ]
 
 export const MOCK_RECIPE_DETAIL = {
-  id: 1,
   title: '계란 두부 조림',
-  thumbnail: 'https://images.unsplash.com/photo-1547592180-85f173990554?w=400&q=80',
   cookTime: 20,
   servings: 2,
   calories: 310,
   ingredients: [
-    { name: '계란',   amount: '3개'  },
+    { name: '계란',   amount: '3개'   },
     { name: '두부',   amount: '1/2모' },
-    { name: '간장',   amount: '2T'   },
-    { name: '설탕',   amount: '1T'   },
-    { name: '참기름', amount: '약간'  },
+    { name: '간장',   amount: '2T'    },
+    { name: '설탕',   amount: '1T'    },
+    { name: '참기름', amount: '약간'   },
   ],
   steps: [
     {
-      step: 1,
       title: '재료 준비',
       description: '두부는 2cm 두께로 썰어주세요. 계란은 미리 상온에 꺼내둡니다.',
       timerSeconds: null,
-      videoUrl: null,
-      stepImage: 'https://images.unsplash.com/photo-1623428187969-5da2dcea5ebf?w=800&q=80',
     },
     {
-      step: 2,
       title: '두부 굽기',
       description: '팬에 기름을 두르고 두부를 중불에서 앞뒤로 노릇하게 구워주세요.',
       timerSeconds: 300,
-      videoUrl: null,
-      stepImage: 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?w=800&q=80',
     },
     {
-      step: 3,
       title: '계란 삶기',
       description: '냄비에 물을 끓인 후 계란을 넣고 8분간 삶아주세요.',
       timerSeconds: 480,
-      videoUrl: null,
-      stepImage: 'https://images.unsplash.com/photo-1607689536313-a7f5cb0f61d4?w=800&q=80',
     },
     {
-      step: 4,
       title: '조림 소스 만들기',
       description: '간장 2큰술, 설탕 1큰술, 물 3큰술을 섞어 조림장을 만들어주세요.',
       timerSeconds: null,
-      videoUrl: null,
-      stepImage: 'https://images.unsplash.com/photo-1563379926898-05f4575a45d8?w=800&q=80',
     },
     {
-      step: 5,
       title: '조림 완성',
       description: '구운 두부와 삶은 계란을 조림장과 함께 약불에서 졸여주세요. 완성 후 참기름을 둘러 마무리합니다.',
       timerSeconds: 600,
-      videoUrl: null,
-      stepImage: 'https://images.unsplash.com/photo-1547592180-85f173990554?w=800&q=80',
     },
   ],
 }

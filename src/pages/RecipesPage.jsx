@@ -36,7 +36,7 @@ export default function RecipesPage() {
     if (!recipes.length) return []
     return [...recipes].sort((a, b) => {
       if (activeFilter === 'time')    return a.cookTime    - b.cookTime
-      if (activeFilter === 'cost')    return a.extraCost   - b.extraCost
+      if (activeFilter === 'cost')    return a.missingCount - b.missingCount
       if (activeFilter === 'cal')     return a.calories    - b.calories
       if (activeFilter === 'missing') return a.missingCount - b.missingCount
       return 0
@@ -183,16 +183,17 @@ export default function RecipesPage() {
       {purchaseModal.open && purchaseModal.recipe && (() => {
         const { recipe, cart } = purchaseModal
         const items = recipe.missingIngredients ?? []
-        const totalCost = items.reduce((sum, item) => {
-          return sum + (item.price ?? 0) * (cart[item.name] ?? 1)
-        }, 0)
+        // price > 0 인 항목만 금액 합산 (API 가격 데이터 없을 경우 0)
+        const totalCost = items.reduce((sum, item) => sum + (item.price ?? 0) * (cart[item.name] ?? 1), 0)
+        const hasPrices = items.some(item => (item.price ?? 0) > 0)
+
         return (
           <div className={styles.modalOverlay} onClick={e => e.target === e.currentTarget && closePurchaseModal()}>
             <div className={styles.modal}>
               {/* 헤더 */}
               <div className={styles.modalHeader}>
                 <div>
-                  <div className={styles.modalTitle}>🛒 추가 구매 목록</div>
+                  <div className={styles.modalTitle}>🛒 추가로 필요한 재료</div>
                   <div className={styles.modalRecipeName}>{recipe.title}</div>
                 </div>
                 <button className={styles.modalCloseBtn} onClick={closePurchaseModal}>
@@ -209,9 +210,11 @@ export default function RecipesPage() {
                     <span className={styles.modalItemEmoji}>{item.emoji ?? '🛒'}</span>
                     <div className={styles.modalItemInfo}>
                       <span className={styles.modalItemName}>{item.name}</span>
-                      <span className={styles.modalItemPrice}>
-                        {item.price ? `${(item.price).toLocaleString()}원 / ${item.unit ?? '개'}` : '가격 미정'}
-                      </span>
+                      {(item.price ?? 0) > 0 && (
+                        <span className={styles.modalItemPrice}>
+                          {item.price.toLocaleString()}원 / {item.unit ?? '개'}
+                        </span>
+                      )}
                     </div>
                     <div className={styles.modalQtyControl}>
                       <button className={styles.modalQtyBtn} onClick={() => handleCartQty(item.name, -1)}>
@@ -222,22 +225,26 @@ export default function RecipesPage() {
                         <Plus size={11} />
                       </button>
                     </div>
-                    <span className={styles.modalItemTotal}>
-                      {item.price ? `${((item.price) * (cart[item.name] ?? 1)).toLocaleString()}원` : '-'}
-                    </span>
+                    {(item.price ?? 0) > 0 && (
+                      <span className={styles.modalItemTotal}>
+                        {(item.price * (cart[item.name] ?? 1)).toLocaleString()}원
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
 
-              {/* 합계 */}
-              <div className={styles.modalTotal}>
-                <span className={styles.modalTotalLabel}>총 예상 금액</span>
-                <span className={styles.modalTotalValue}>{totalCost.toLocaleString()}원</span>
-              </div>
+              {/* 합계 — 가격 데이터 있을 때만 표시 */}
+              {hasPrices && (
+                <div className={styles.modalTotal}>
+                  <span className={styles.modalTotalLabel}>총 예상 금액</span>
+                  <span className={styles.modalTotalValue}>{totalCost.toLocaleString()}원</span>
+                </div>
+              )}
 
               {/* 액션 */}
               <div className={styles.modalActions}>
-                <button className={styles.modalCancelBtn} onClick={closePurchaseModal}>취소</button>
+                <button className={styles.modalCancelBtn} onClick={closePurchaseModal}>닫기</button>
                 <button className={styles.modalCartBtn} onClick={handleAddAllToCart}>
                   <ShoppingCart size={15} />
                   장바구니 담기
@@ -361,11 +368,11 @@ function RecipeCard({ recipe, rank, isHovered, onMouseEnter, onMouseLeave, onPic
           )}
         </div>
 
-        {recipe.extraCost > 0 && (
+        {recipe.missingCount > 0 && (
           <div className={styles.costLine} onClick={onCostClick} title="클릭하여 품목 확인">
-            <span className={styles.costLabel}>추가 구매 예상</span>
+            <span className={styles.costLabel}>추가로 필요한 재료</span>
             <div className={styles.costRight}>
-              <span className={styles.costValue}>{recipe.extraCost.toLocaleString()}원</span>
+              <span className={styles.costValue}>{recipe.missingCount}가지</span>
               <span className={styles.costHint}>목록 보기 →</span>
             </div>
           </div>

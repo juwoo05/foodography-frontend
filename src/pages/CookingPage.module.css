@@ -121,11 +121,11 @@
   color: #0D1117 !important;
 }
 
-/* ── 3단 레이아웃 ─────────────────────────────────────────────────────── */
+/* ── 3단 레이아웃: 사이드바 | 가운데(YouTube+스텝) | 타임라인 ────────── */
 .workspace {
   flex: 1;
   display: grid;
-  grid-template-columns: 220px 1fr 400px;
+  grid-template-columns: 220px 1fr 280px;
   overflow: hidden;
   min-height: 0;
 }
@@ -223,18 +223,56 @@
 .ingName { color: #8B949E; }
 .ingAmt  { font-weight: 600; color: #E6EDF3; font-family: 'Space Mono', monospace; }
 
-/* ── 가운데 메인 ──────────────────────────────────────────────────────── */
-.mainPanel {
-  padding: 28px 32px;
-  overflow-y: auto;
+/* ── 가운데 패널: YouTube 플레이어 + 스텝 내용 ───────────────────────── */
+.centerPanel {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  overflow: hidden;
+  min-height: 0;
   border-right: 1px solid rgba(255,255,255,0.07);
 }
 
-.mainPanel::-webkit-scrollbar { width: 3px; }
-.mainPanel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 2px; }
+/* YouTube 플레이어 영역 */
+.ytPlayerArea {
+  flex-shrink: 0;
+  background: #000;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+.ytIframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  display: block;
+  border: none;
+}
+
+/* 영상 없을 때 빈 상태 */
+.ytNoVideo {
+  aspect-ratio: 16 / 9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #1C2330;
+  color: #484F58;
+  font-size: 12px;
+  font-family: 'Space Mono', monospace;
+}
+
+/* 스텝 내용 영역 */
+.stepContent {
+  flex: 1;
+  padding: 24px 32px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 0;
+}
+
+.stepContent::-webkit-scrollbar { width: 3px; }
+.stepContent::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 2px; }
 
 .stepBadge {
   display: inline-block;
@@ -243,12 +281,12 @@
   color: #2ECC71;
   letter-spacing: 0.08em;
   font-family: 'Space Mono', monospace;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .stepTitle {
   font-family: 'Syne', sans-serif;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
   letter-spacing: -0.03em;
   color: #E6EDF3;
@@ -266,7 +304,7 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 16px 20px;
+  padding: 14px 18px;
   background: #161B22;
   border: 1px solid rgba(46,204,113,0.15);
   border-radius: 12px;
@@ -290,7 +328,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 16px 20px;
+  padding: 14px 18px;
   background: rgba(46,204,113,0.1);
   border: 1px solid rgba(46,204,113,0.25);
   border-radius: 12px;
@@ -299,23 +337,25 @@
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-.completeEmoji { font-size: 28px; }
+.completeEmoji { font-size: 26px; }
 .completeTitle {
   display: block;
   font-family: 'Syne', sans-serif;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
   color: #2ECC71;
   margin-bottom: 2px;
 }
 .completeSub { font-size: 12px; color: #8B949E; }
 
-/* 네비게이션 버튼 */
+/* 네비게이션 버튼 — centerPanel 하단 고정 */
 .navBtns {
   display: flex;
   gap: 10px;
-  margin-top: auto;
-  padding-top: 4px;
+  flex-shrink: 0;
+  padding: 14px 32px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  background: #0D1117;
 }
 
 .navBtn {
@@ -347,99 +387,33 @@
   transform: translateY(-1px);
 }
 
-/* ── 오른쪽: YouTube + 타임라인 패널 ─────────────────────────────────── */
-.ytPanel {
+/* ── 오른쪽: 타임라인 전용 패널 ─────────────────────────────────────── */
+.timelinePanel {
   display: flex;
   flex-direction: column;
   background: #161B22;
   overflow: hidden;
-}
-
-.ytPanelHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.07);
-  flex-shrink: 0;
-}
-
-.ytPanelTitle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #E6EDF3;
-  font-family: 'Space Mono', monospace;
-}
-
-.ytRedIcon  { color: #FF3333; }
-
-.ytRedBadge {
-  padding: 3px 9px;
-  background: rgba(255,51,51,0.12);
-  border: 1px solid rgba(255,51,51,0.2);
-  color: #FF6B6B;
-  border-radius: 99px;
-  font-size: 10px;
-  font-weight: 700;
-  font-family: 'Space Mono', monospace;
-  letter-spacing: 0.04em;
-}
-
-/* YouTube 플레이어 */
-.ytPlayerWrap {
-  flex-shrink: 0;
-  background: #000;
-  border-bottom: 1px solid rgba(255,255,255,0.07);
-}
-.ytIframe {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  display: block;
-  border: none;
-}
-
-/* 영상 없을 때 빈 상태 */
-.ytNoVideo {
-  flex-shrink: 0;
-  aspect-ratio: 16 / 9;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  background: #1C2330;
-  border-bottom: 1px solid rgba(255,255,255,0.07);
-  color: #484F58;
-  font-size: 12px;
-  font-family: 'Space Mono', monospace;
-}
-
-/* ── 타임라인 섹션 ────────────────────────────────────────────────────── */
-.timelineSection {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
+  min-width: 0;
 }
 
 .timelineHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 18px 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
   flex-shrink: 0;
 }
 
+.ytRedIcon { color: #FF3333; }
+
 .timelineTitle {
+  display: flex;
+  align-items: center;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   color: #00FF7F;
   font-family: 'Space Mono', monospace;
 }
@@ -452,17 +426,19 @@
   background: rgba(0,255,127,0.07);
   border: 1px solid rgba(0,255,127,0.15);
   border-radius: 99px;
+  flex-shrink: 0;
 }
 
 .timelineBody {
   flex: 1;
   overflow-y: auto;
-  padding: 14px 16px 16px;
+  padding: 12px 14px 16px;
+  min-height: 0;
 }
 .timelineBody::-webkit-scrollbar { width: 3px; }
 .timelineBody::-webkit-scrollbar-thumb { background: rgba(0,255,127,0.15); border-radius: 2px; }
 
-/* 로딩 빈 상태 */
+/* 빈 상태 */
 .timelineEmpty {
   display: flex;
   flex-direction: column;
@@ -473,27 +449,20 @@
   color: #484F58;
   font-size: 12px;
   font-family: 'Space Mono', monospace;
-}
-.timelineSpinner {
-  width: 22px; height: 22px;
-  border-radius: 50%;
-  border: 2px solid rgba(0,255,127,0.12);
-  border-top-color: #00FF7F;
-  animation: spin 0.8s linear infinite;
+  text-align: center;
 }
 
-/* ── antd Timeline 스타일 커스텀 구현 ────────────────────────────────── */
+/* ── 타임라인 아이템 ──────────────────────────────────────────────────── */
 .timeline {
   padding: 0;
   list-style: none;
 }
 
-/* 각 타임라인 아이템 */
 .tlItem {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   cursor: pointer;
-  padding: 6px 8px;
+  padding: 6px 6px;
   border-radius: 8px;
   border: 1px solid transparent;
   transition: all 0.18s;
@@ -531,9 +500,7 @@
   border-color: #00FF7F !important;
   box-shadow: 0 0 8px rgba(0,255,127,0.5);
 }
-.tlItem:hover .tlDot {
-  border-color: #00FF7F;
-}
+.tlItem:hover .tlDot { border-color: #00FF7F; }
 
 .tlLine {
   width: 2px;
@@ -544,37 +511,40 @@
   border-radius: 1px;
   transition: background 0.18s;
 }
-.tlLineActive {
-  background: rgba(0,255,127,0.4) !important;
-}
-.tlItem:hover .tlLine {
-  background: rgba(0,255,127,0.25);
-}
+.tlLineActive { background: rgba(0,255,127,0.4) !important; }
+.tlItem:hover .tlLine { background: rgba(0,255,127,0.25); }
 
-/* 오른쪽: 내용 */
+/* 오른쪽: 내용 — 타임스탬프 잘림 방지 */
 .tlContent {
   flex: 1;
-  padding-bottom: 16px;
-  min-width: 0;
+  padding-bottom: 14px;
+  min-width: 0;         /* flex 자식의 overflow 허용에 필수 */
 }
 
 .tlTitleRow {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 5px;
+  gap: 6px;
+  margin-bottom: 4px;
+  min-width: 0;
 }
 
+/* 스텝 이름: 공간 부족 시 말줄임 */
 .tlStepName {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: #E6EDF3;
   font-family: 'Noto Sans KR', sans-serif;
   line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .tlItemActive .tlStepName { color: #00FF7F; }
 
+/* 타임스탬프: 절대 축소되지 않음 */
 .tlTime {
   flex-shrink: 0;
   font-size: 10px;
@@ -582,20 +552,25 @@
   color: #00FF7F;
   background: rgba(0,255,127,0.08);
   border: 1px solid rgba(0,255,127,0.2);
-  padding: 2px 7px;
+  padding: 2px 6px;
   border-radius: 99px;
   white-space: nowrap;
 }
 
 .tlDesc {
-  font-size: 12px;
+  font-size: 11px;
   color: #8B949E;
-  line-height: 1.65;
+  line-height: 1.6;
   margin: 0;
+  /* 설명도 긴 경우 말줄임 (2줄) */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .tlItemActive .tlDesc { color: #C9D1D9; }
 
-/* ── 빈 상태 / 풀 스크린 ──────────────────────────────────────────────── */
+/* ── 빈 상태 / 로딩 ──────────────────────────────────────────────────── */
 .fullCenter {
   display: flex;
   flex-direction: column;
@@ -629,9 +604,130 @@
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── 완료 모달 ───────────────────────────────────────────────────────── */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 17, 23, 0.85);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+.modalCard {
+  position: relative;
+  background: #161B22;
+  border: 1px solid rgba(46, 204, 113, 0.25);
+  border-radius: 20px;
+  padding: 48px 40px 36px;
+  width: min(420px, 90vw);
+  text-align: center;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(46,204,113,0.08);
+  animation: slideUp 0.25s ease;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.modalClose {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: none;
+  border: none;
+  color: #484F58;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  border-radius: 6px;
+  transition: color 0.2s, background 0.2s;
+}
+.modalClose:hover { color: #E6EDF3; background: rgba(255,255,255,0.05); }
+
+.modalEmoji {
+  font-size: 52px;
+  line-height: 1;
+  margin-bottom: 16px;
+  filter: drop-shadow(0 0 12px rgba(46,204,113,0.3));
+}
+
+.modalTitle {
+  font-family: 'Syne', sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #2ECC71;
+  margin-bottom: 10px;
+}
+
+.modalRecipe {
+  font-size: 15px;
+  font-weight: 700;
+  color: #E6EDF3;
+  margin-bottom: 10px;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+
+.modalSub {
+  font-size: 13px;
+  color: #8B949E;
+  line-height: 1.7;
+  margin-bottom: 32px;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+
+.modalBtns {
+  display: flex;
+  gap: 10px;
+}
+
+.modalBtnSecondary {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: transparent;
+  color: #8B949E;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif;
+  transition: all 0.2s;
+}
+.modalBtnSecondary:hover { border-color: rgba(255,255,255,0.2); color: #E6EDF3; }
+
+.modalBtnPrimary {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: #2ECC71;
+  color: #0D1117;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif;
+  transition: all 0.2s;
+}
+.modalBtnPrimary:hover {
+  background: #27ae60;
+  box-shadow: 0 4px 16px rgba(46,204,113,0.35);
+  transform: translateY(-1px);
+}
+
 /* ── 반응형 ──────────────────────────────────────────────────────────── */
-@media (max-width: 1200px) {
-  .workspace { grid-template-columns: 200px 1fr 360px; }
+@media (max-width: 1280px) {
+  .workspace { grid-template-columns: 200px 1fr 240px; }
+}
+
+@media (max-width: 1024px) {
+  .workspace { grid-template-columns: 180px 1fr 220px; }
 }
 
 @media (max-width: 980px) {
@@ -643,14 +739,14 @@
   .sidebar {
     border-right: none;
     border-bottom: 1px solid rgba(255,255,255,0.07);
-    max-height: 200px;
+    max-height: 180px;
     flex-direction: row;
     flex-wrap: wrap;
     gap: 4px;
-    padding: 12px;
+    padding: 10px;
   }
   .stepList { flex-direction: row; flex-wrap: wrap; margin-bottom: 0; }
   .ingBox { display: none; }
-  .mainPanel { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.07); padding: 20px; }
-  .ytPanel { max-height: 600px; }
+  .centerPanel { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.07); }
+  .timelinePanel { max-height: 400px; }
 }

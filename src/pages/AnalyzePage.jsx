@@ -2,62 +2,8 @@ import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '../store/appStore'
 import { fetchRecipes, saveAfterResult } from '../utils/api'
+import { getEmoji } from '../utils/emoji'
 import styles from './AnalyzePage.module.css'
-
-// ── 이모지 매핑 ────────────────────────────────────────────────────────
-// keywords 중 하나라도 식품명에 포함되면 매칭 (순서 = 우선순위)
-const EMOJI_TABLE = [
-    { emoji: '🥚', keywords: ['계란', '달걀', '에그'] },
-    { emoji: '🥛', keywords: ['우유', '밀크', '두유', '귀리유'] },
-    { emoji: '🧀', keywords: ['치즈'] },
-    { emoji: '🧈', keywords: ['버터', '마가린'] },
-    { emoji: '🥕', keywords: ['당근'] },
-    { emoji: '🧅', keywords: ['양파'] },
-    { emoji: '🧄', keywords: ['마늘'] },
-    { emoji: '🥔', keywords: ['감자'] },
-    { emoji: '🍠', keywords: ['고구마'] },
-    { emoji: '🍅', keywords: ['토마토'] },
-    { emoji: '🥦', keywords: ['브로콜리'] },
-    { emoji: '🥬', keywords: ['대파', '쪽파', '파', '상추', '깻잎', '시금치', '배추', '양배추'] },
-    { emoji: '🥒', keywords: ['오이', '호박', '주키니'] },
-    { emoji: '🍆', keywords: ['가지'] },
-    { emoji: '🌽', keywords: ['옥수수', '콘'] },
-    { emoji: '🍄', keywords: ['버섯', '표고', '느타리', '팽이'] },
-    { emoji: '🫘', keywords: ['두부', '콩', '청국장', '된장'] },
-    { emoji: '🌶️', keywords: ['고추', '파프리카', '피망'] },
-    { emoji: '🥩', keywords: ['소고기', '돼지고기', '삼겹살', '목살', '갈비', '스테이크', '육'] },
-    { emoji: '🍗', keywords: ['닭고기', '치킨', '닭', '가금'] },
-    { emoji: '🥓', keywords: ['베이컨', '햄', '소시지', '핫도그'] },
-    { emoji: '🐟', keywords: ['생선', '연어', '고등어', '참치', '광어', '조기', '갈치', '명태'] },
-    { emoji: '🍤', keywords: ['새우', '오징어', '문어', '낙지', '조개', '굴', '홍합'] },
-    { emoji: '🍎', keywords: ['사과'] },
-    { emoji: '🍊', keywords: ['오렌지', '귤', '레몬', '라임'] },
-    { emoji: '🍌', keywords: ['바나나'] },
-    { emoji: '🍇', keywords: ['포도'] },
-    { emoji: '🍓', keywords: ['딸기'] },
-    { emoji: '🫐', keywords: ['블루베리'] },
-    { emoji: '🍑', keywords: ['복숭아', '자두'] },
-    { emoji: '🍋', keywords: ['레몬'] },
-    { emoji: '🥜', keywords: ['땅콩', '견과', '아몬드', '호두', '잣'] },
-    { emoji: '🍚', keywords: ['밥', '쌀', '현미'] },
-    { emoji: '🍜', keywords: ['면', '국수', '라면', '파스타', '우동', '소면'] },
-    { emoji: '🥫', keywords: ['통조림', '캔', '참치캔'] },
-    { emoji: '🧃', keywords: ['주스', '음료'] },
-    { emoji: '🥤', keywords: ['음료수', '콜라', '사이다'] },
-    { emoji: '🧂', keywords: ['소금', '설탕', '후추', '양념'] },
-    { emoji: '🛢️', keywords: ['기름', '올리브유', '식용유'] },
-    { emoji: '🍶', keywords: ['식초', '간장', '소스', '케첩'] },
-    { emoji: '🧊', keywords: ['얼음'] },
-]
-
-const getEmoji = (name) => {
-    if (!name) return '🥬'
-    const lower = name.toLowerCase()
-    for (const { emoji, keywords } of EMOJI_TABLE) {
-        if (keywords.some(k => lower.includes(k))) return emoji
-    }
-    return '🥬'
-}
 
 // ── 필수 양념 목록 ─────────────────────────────────────────────────────
 const DEFAULT_SEASONINGS = [
@@ -535,9 +481,28 @@ export default function AnalyzePage() {
     const handleConfirm = async () => {
         setShowModal(false); setIsSubmitting(true)
         try {
-            // STEP 1: 수정된 식재료 결과 FOOD_AFTER 저장 (실패해도 레시피 추천 진행)
+            // 체크된 양념·부재료 → ingredients 구조로 변환
+            const checkedSeasonings = DEFAULT_SEASONINGS
+                .filter(s => seasoningChecks[s.id])
+                .map(s => ({
+                    id:          s.id,
+                    label:       s.name,
+                    name:        s.name,
+                    confidence:  1.0,
+                    freshness:   '알 수 없음',
+                    quantity:    1,
+                    unit:        '개',
+                    note:        '양념·부재료',
+                    polygon:     [],
+                    polygons:    [],
+                    stockStatus: '많음',
+                }))
+
+            const allIngredients = [...ingredients, ...checkedSeasonings]
+
+            // STEP 1: 수정된 식재료 + 체크된 양념 결과 FOOD_AFTER 저장 (실패해도 레시피 추천 진행)
             try {
-                await saveAfterResult(analysisResult, ingredients)
+                await saveAfterResult(analysisResult, allIngredients)
             } catch (e) {
                 console.error('[API] FOOD_AFTER 저장 실패:', e.message)
             }

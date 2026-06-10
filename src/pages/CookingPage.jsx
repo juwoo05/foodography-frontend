@@ -1,17 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  ChevronLeft, ChevronRight, Clock, Users, Flame,
-  CheckCircle, Circle, AlertCircle, Youtube,
+  ChevronLeft, ChevronRight, Clock, Flame,
+  CheckCircle, Circle, AlertCircle, Youtube, X,
 } from 'lucide-react'
 import { useAppStore } from '../store/appStore'
-import { fetchRecipeDetail, MOCK_RECIPE_DETAIL } from '../utils/api'
 import Timer from '../components/ui/Timer'
 import styles from './CookingPage.module.css'
 
-const USE_MOCK = true
-
-/** youtube_url에서 videoId 추출 */
+/** youtube_url 에서 videoId 추출 */
 function extractVideoId(url) {
   if (!url) return null
   const m = url.match(/(?:v=|youtu\.be\/|embed\/)([^&?/\s]+)/)
@@ -23,57 +20,68 @@ export default function CookingPage() {
   const navigate       = useNavigate()
   const selectedRecipe = useAppStore(s => s.selectedRecipe)
 
-  const [detail,         setDetail]        = useState(null)
-  const [loading,        setLoading]        = useState(true)
   const [currentStep,    setCurrentStep]    = useState(0)
   const [completedSteps, setCompletedSteps] = useState(new Set())
   const [timerKey,       setTimerKey]       = useState(0)
-
-  // YouTube 시간 탐색 — timeline 클릭 시 iframe 재생성
-  const [seekSeconds, setSeekSeconds] = useState(0)
-  const [seekKey,     setSeekKey]     = useState(0)
+  const [seekSeconds,    setSeekSeconds]    = useState(0)
+  const [seekKey,        setSeekKey]        = useState(0)
+  const [showModal,      setShowModal]      = useState(false)
 
   const stepRefs = useRef([])
 
-  const videoId      = extractVideoId(selectedRecipe?.youtube_url)
-  // recipe_video_summary: List<VideoSummaryDTO> | null
   const videoSummary = selectedRecipe?.recipe_video_summary ?? []
+  const videoId      = extractVideoId(selectedRecipe?.youtube_url)
 
-  // 레시피 로드 (mock 유지)
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const data = USE_MOCK
-          ? await new Promise(r => setTimeout(() => r(MOCK_RECIPE_DETAIL), 600))
-          : await fetchRecipeDetail(selectedRecipe?.id)
-        setDetail(data)
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
-  }, [selectedRecipe])
-
-  // 단계 변경 시 스크롤
+  // 단계 변경 시 해당 항목으로 스크롤
   useEffect(() => {
     stepRefs.current[currentStep]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   }, [currentStep])
 
-  const handleStepClick = (idx) => { setCurrentStep(idx); setTimerKey(k => k + 1) }
-  const markComplete    = (idx) => setCompletedSteps(prev => new Set([...prev, idx]))
-  const goNext = () => {
-    markComplete(currentStep)
-    if (currentStep < (detail?.steps?.length ?? 0) - 1) setCurrentStep(s => s + 1)
-  }
-  const goPrev = () => { if (currentStep > 0) setCurrentStep(s => s - 1) }
-
-  /** 타임라인 클릭 → YouTube 해당 구간으로 이동 */
-  const handleTimelineSeek = (startSeconds) => {
-    setSeekSeconds(startSeconds)
+  // ── 영상 탐색 헬퍼 ──
+  const seekTo = (seconds) => {
+    setSeekSeconds(seconds)
     setSeekKey(k => k + 1)
   }
 
-  if (!selectedRecipe && !loading) return (
+  // 왼쪽 사이드바 / 헤더 닷 클릭 → 단계 이동 + 영상 탐색
+  const handleStepClick = (idx) => {
+    setCurrentStep(idx)
+    setTimerKey(k => k + 1)
+    seekTo(videoSummary[idx].startSeconds)
+  }
+
+  const markComplete = (idx) => setCompletedSteps(prev => new Set([...prev, idx]))
+
+  // 다음 단계 버튼 → 현재 단계 완료 처리 + 다음 단계 이동 + 영상 탐색
+  const goNext = () => {
+    markComplete(currentStep)
+    if (currentStep < videoSummary.length - 1) {
+      const nextIdx = currentStep + 1
+      setCurrentStep(nextIdx)
+      seekTo(videoSummary[nextIdx].startSeconds)
+    }
+  }
+
+  // 이전 단계 버튼 → 이전 단계 이동 + 영상 탐색
+  const goPrev = () => {
+    if (currentStep > 0) {
+      const prevIdx = currentStep - 1
+      setCurrentStep(prevIdx)
+      seekTo(videoSummary[prevIdx].startSeconds)
+    }
+  }
+
+  // 오른쪽 타임라인 클릭 → 영상 탐색
+  const handleTimelineSeek = (startSec) => seekTo(startSec)
+
+  // 완료 버튼 → 모달 표시
+  const handleComplete = () => {
+    markComplete(currentStep)
+    setShowModal(true)
+  }
+
+  // ── 에러 상태 ──
+  if (!selectedRecipe) return (
     <div className={styles.fullCenter}>
       <AlertCircle size={40} style={{ color: '#484F58', marginBottom: 16 }} />
       <p style={{ color: '#8B949E', marginBottom: 16 }}>선택된 레시피가 없습니다.</p>
@@ -81,17 +89,19 @@ export default function CookingPage() {
     </div>
   )
 
-  if (loading) return (
+  if (videoSummary.length === 0) return (
     <div className={styles.fullCenter}>
-      <div className={styles.loadingRing} />
-      <p style={{ color: '#8B949E', marginTop: 16 }}>레시피를 불러오는 중...</p>
+      <AlertCircle size={40} style={{ color: '#484F58', marginBottom: 16 }} />
+      <p style={{ color: '#8B949E', marginBottom: 16 }}>조리 타임라인 데이터가 없습니다.</p>
+      <button className={styles.goBtn} onClick={() => navigate('/recipes')}>레시피 목록으로 돌아가기 →</button>
     </div>
   )
 
-  const totalSteps = detail.steps.length
-  const step       = detail.steps[currentStep]
-  const isLast     = currentStep === totalSteps - 1
-  const allDone    = completedSteps.size === totalSteps
+  const totalSteps   = videoSummary.length
+  const step         = videoSummary[currentStep]
+  const isLast       = currentStep === totalSteps - 1
+  const stepDuration = step.endSeconds - step.startSeconds
+  const showTimer    = stepDuration >= 60
 
   const iframeSrc = videoId
     ? `https://www.youtube.com/embed/${videoId}?start=${seekSeconds}&autoplay=${seekKey > 0 ? 1 : 0}&rel=0`
@@ -100,6 +110,35 @@ export default function CookingPage() {
   return (
     <div className={styles.page}>
 
+      {/* ── 완료 모달 ── */}
+      {showModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowModal(false)}>
+          <div className={styles.modalCard} onClick={e => e.stopPropagation()}>
+            <button className={styles.modalClose} onClick={() => setShowModal(false)}>
+              <X size={16} />
+            </button>
+            <div className={styles.modalEmoji}>🎉</div>
+            <h2 className={styles.modalTitle}>요리 완성!</h2>
+            <p className={styles.modalRecipe}>{selectedRecipe.title}</p>
+            <p className={styles.modalSub}>맛있게 드세요 😊<br />요리 기록이 저장되었습니다.</p>
+            <div className={styles.modalBtns}>
+              <button
+                className={styles.modalBtnSecondary}
+                onClick={() => setShowModal(false)}
+              >
+                계속 보기
+              </button>
+              <button
+                className={styles.modalBtnPrimary}
+                onClick={() => navigate('/recipes')}
+              >
+                레시피 목록으로
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── 헤더 ── */}
       <header className={styles.header}>
         <div className={styles.headerTop}>
@@ -107,39 +146,48 @@ export default function CookingPage() {
             <ChevronLeft size={15} /> 레시피 목록
           </button>
           <div className={styles.recipeMeta}>
-            <span><Clock size={12} />{detail.cookTime}분</span>
-            <span><Users size={12} />{detail.servings}인분</span>
-            <span><Flame size={12} />{detail.calories}kcal</span>
+            {selectedRecipe.cookTime > 0 && (
+              <span><Clock size={12} />{selectedRecipe.cookTime}분</span>
+            )}
+            {selectedRecipe.calories > 0 && (
+              <span><Flame size={12} />{selectedRecipe.calories}kcal</span>
+            )}
+            {selectedRecipe.difficulty && (
+              <span>{selectedRecipe.difficulty}</span>
+            )}
           </div>
         </div>
-        <h1 className={styles.recipeTitle}>{detail.title}</h1>
+        <h1 className={styles.recipeTitle}>{selectedRecipe.title}</h1>
 
         {/* 스텝 진행 바 */}
         <div className={styles.stepsIndicator}>
-          {detail.steps.map((s, idx) => (
+          {videoSummary.map((s, idx) => (
             <button
               key={idx}
               className={`${styles.stepDot} ${idx === currentStep ? styles.stepDotActive : ''} ${completedSteps.has(idx) ? styles.stepDotDone : ''}`}
               onClick={() => handleStepClick(idx)}
-              title={s.title}
+              title={s.stepName}
             >
               {completedSteps.has(idx) ? '✓' : idx + 1}
             </button>
           ))}
           <div className={styles.stepDotTrack}>
-            <div className={styles.stepDotFill} style={{ width: `${((currentStep) / (totalSteps - 1)) * 100}%` }} />
+            <div
+              className={styles.stepDotFill}
+              style={{ width: totalSteps > 1 ? `${(currentStep / (totalSteps - 1)) * 100}%` : '0%' }}
+            />
           </div>
         </div>
       </header>
 
-      {/* ── 본문: 사이드바 | 메인 | 유튜브+타임라인 ── */}
+      {/* ── 본문: 사이드바 | 가운데(YouTube+스텝) | 타임라인 ── */}
       <div className={styles.workspace}>
 
-        {/* ── 왼쪽 사이드바 ── */}
+        {/* ── 왼쪽: 단계 목록 + 재료 ── */}
         <aside className={styles.sidebar}>
           <p className={styles.sidebarLabel}>단계</p>
           <nav className={styles.stepList}>
-            {detail.steps.map((s, idx) => (
+            {videoSummary.map((s, idx) => (
               <button
                 key={idx}
                 ref={el => (stepRefs.current[idx] = el)}
@@ -149,123 +197,100 @@ export default function CookingPage() {
                 <span className={styles.stepItemIcon}>
                   {completedSteps.has(idx) ? <CheckCircle size={14} /> : <Circle size={14} />}
                 </span>
-                <span className={styles.stepItemLabel}>{s.title}</span>
-                {s.timerSeconds && (
-                  <span className={styles.stepTimerChip}>
-                    <Clock size={9} />{Math.floor(s.timerSeconds / 60)}분
-                  </span>
-                )}
+                <span className={styles.stepItemLabel}>{s.stepName}</span>
+                <span className={styles.stepTimerChip}>
+                  <Clock size={9} />{s.displayTime}
+                </span>
               </button>
             ))}
           </nav>
 
-          <div className={styles.ingBox}>
-            <p className={styles.sidebarLabel}>재료</p>
-            {detail.ingredients.map(ing => (
-              <div key={ing.name} className={styles.ingRow}>
-                <span className={styles.ingName}>{ing.name}</span>
-                <span className={styles.ingAmt}>{ing.amount}</span>
-              </div>
-            ))}
-          </div>
+          {/* 재료 목록 — ingredients: List<String> */}
+          {selectedRecipe.ingredients?.length > 0 && (
+            <div className={styles.ingBox}>
+              <p className={styles.sidebarLabel}>재료</p>
+              {selectedRecipe.ingredients.map((name, i) => (
+                <div key={i} className={styles.ingRow}>
+                  <span className={styles.ingName}>{name}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </aside>
 
-        {/* ── 가운데 메인 ── */}
-        <main className={styles.mainPanel}>
-          <div className={styles.stepHeader}>
-            <span className={styles.stepBadge}>STEP {currentStep + 1} / {totalSteps}</span>
-            <h2 className={styles.stepTitle}>{step.title}</h2>
+        {/* ── 가운데: YouTube 플레이어 + 스텝 내용 ── */}
+        <div className={styles.centerPanel}>
+
+          {/* YouTube 플레이어 */}
+          <div className={styles.ytPlayerArea}>
+            {iframeSrc ? (
+              <iframe
+                key={seekKey}
+                src={iframeSrc}
+                title={selectedRecipe.title}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className={styles.ytIframe}
+              />
+            ) : (
+              <div className={styles.ytNoVideo}>
+                <Youtube size={32} style={{ opacity: 0.15 }} />
+                <span>등록된 영상이 없습니다</span>
+              </div>
+            )}
           </div>
 
-          <p className={styles.stepDesc}>{step.description}</p>
-
-          {step.timerSeconds && (
-            <div className={styles.timerRow}>
-              <div className={styles.timerLabel}><Clock size={14} />타이머</div>
-              <Timer
-                key={`${currentStep}-${timerKey}`}
-                initialSeconds={step.timerSeconds}
-                onComplete={() => markComplete(currentStep)}
-              />
+          {/* 스텝 내용 — 스크롤 영역 */}
+          <div className={styles.stepContent}>
+            <div className={styles.stepHeader}>
+              <span className={styles.stepBadge}>STEP {currentStep + 1} / {totalSteps}</span>
+              <h2 className={styles.stepTitle}>{step.stepName}</h2>
             </div>
-          )}
 
-          {allDone && (
-            <div className={styles.completeBanner}>
-              <span className={styles.completeEmoji}>🎉</span>
-              <div>
-                <strong className={styles.completeTitle}>{detail.title} 완성!</strong>
-                <p className={styles.completeSub}>맛있게 드세요 😊</p>
+            <p className={styles.stepDesc}>{step.description}</p>
+
+            {showTimer && (
+              <div className={styles.timerRow}>
+                <div className={styles.timerLabel}><Clock size={14} />타이머</div>
+                <Timer
+                  key={`${currentStep}-${timerKey}`}
+                  initialSeconds={stepDuration}
+                  onComplete={() => markComplete(currentStep)}
+                />
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
+          {/* 이전 / 다음 버튼 — 항상 하단에 고정 */}
           <div className={styles.navBtns}>
             <button className={styles.navBtn} onClick={goPrev} disabled={currentStep === 0}>
               <ChevronLeft size={16} />이전
             </button>
             <button
               className={`${styles.navBtn} ${styles.navBtnPrimary}`}
-              onClick={isLast ? () => markComplete(currentStep) : goNext}
+              onClick={isLast ? handleComplete : goNext}
             >
               {isLast ? '완료 ✓' : <>다음 단계<ChevronRight size={16} /></>}
             </button>
           </div>
-        </main>
+        </div>
 
-        {/* ── 오른쪽: YouTube 플레이어 + 타임라인 ── */}
-        <aside className={styles.ytPanel}>
-
-          {/* 패널 헤더 */}
-          <div className={styles.ytPanelHeader}>
-            <span className={styles.ytPanelTitle}>
-              <Youtube size={17} className={styles.ytRedIcon} />
-              요리 영상
+        {/* ── 오른쪽: 조리 타임라인 ── */}
+        <aside className={styles.timelinePanel}>
+          <div className={styles.timelineHeader}>
+            <span className={styles.timelineTitle}>
+              <Youtube size={13} className={styles.ytRedIcon} style={{ marginRight: 6 }} />
+              조리 타임라인
             </span>
-            <span className={styles.ytRedBadge}>YouTube</span>
+            <span className={styles.timelineCount}>{videoSummary.length}단계</span>
           </div>
 
-          {/* YouTube 플레이어 — DB에 저장된 URL만 표시 */}
-          {iframeSrc ? (
-            <div className={styles.ytPlayerWrap}>
-              <iframe
-                key={seekKey}
-                src={iframeSrc}
-                title={selectedRecipe?.title ?? 'YouTube'}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className={styles.ytIframe}
-              />
-            </div>
-          ) : (
-            <div className={styles.ytNoVideo}>
-              <Youtube size={32} style={{ opacity: 0.15 }} />
-              <span>등록된 영상이 없습니다</span>
-            </div>
-          )}
-
-          {/* 조리 타임라인 섹션 */}
-          <div className={styles.timelineSection}>
-            <div className={styles.timelineHeader}>
-              <span className={styles.timelineTitle}>조리 타임라인</span>
-              {videoSummary.length > 0 && (
-                <span className={styles.timelineCount}>{videoSummary.length}단계</span>
-              )}
-            </div>
-
-            <div className={styles.timelineBody}>
-              {videoSummary.length === 0 ? (
-                <div className={styles.timelineEmpty}>
-                  <span>타임라인 데이터가 없습니다</span>
-                </div>
-              ) : (
-                <VideoTimeline
-                  steps={videoSummary}
-                  seekSeconds={seekSeconds}
-                  onSeek={handleTimelineSeek}
-                />
-              )}
-            </div>
+          <div className={styles.timelineBody}>
+            <VideoTimeline
+              steps={videoSummary}
+              seekSeconds={seekSeconds}
+              onSeek={handleTimelineSeek}
+            />
           </div>
         </aside>
       </div>
@@ -273,7 +298,7 @@ export default function CookingPage() {
   )
 }
 
-// ── antd Timeline 스타일 커스텀 컴포넌트 ──────────────────────────────
+// ── 타임라인 컴포넌트 ──────────────────────────────────────────────────
 function VideoTimeline({ steps, seekSeconds, onSeek }) {
   return (
     <div className={styles.timeline}>
@@ -290,13 +315,11 @@ function VideoTimeline({ steps, seekSeconds, onSeek }) {
             tabIndex={0}
             onKeyDown={e => e.key === 'Enter' && onSeek(step.startSeconds)}
           >
-            {/* 왼쪽: 도트 + 연결선 */}
             <div className={styles.tlLeft}>
               <div className={`${styles.tlDot} ${isActive ? styles.tlDotActive : ''}`} />
               {!isLast && <div className={`${styles.tlLine} ${isActive ? styles.tlLineActive : ''}`} />}
             </div>
 
-            {/* 오른쪽: 내용 */}
             <div className={styles.tlContent}>
               <div className={styles.tlTitleRow}>
                 <span className={styles.tlStepName}>{step.stepName}</span>

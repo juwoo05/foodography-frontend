@@ -195,8 +195,10 @@ export default function Navbar({ onMenuClick }) {
         {/* 유저 */}
         {user ? (
           <div className={styles.userWrap}>
-            <User size={18} className={styles.avatar} />
-            <span className={styles.userName}>{displayName}</span>
+            <button className={styles.profileBtn} onClick={() => navigate('/mypage')} title="마이페이지">
+              <User size={18} className={styles.avatar} />
+              <span className={styles.userName}>{displayName}</span>
+            </button>
             <button className={styles.logoutBtn} onClick={() => setLogoutOpen(true)} title="로그아웃">
               <LogOut size={15} />
             </button>

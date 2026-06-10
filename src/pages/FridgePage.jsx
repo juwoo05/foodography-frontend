@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { matchIngredients, indexFoodDatabase } from '../utils/api'
+import { matchIngredients } from '../utils/api'
+import { getEmoji } from '../utils/emoji'
 
 // ────────────────────────────────────────────
 //  Samsung Family Hub–inspired Fridge UI
@@ -26,7 +27,6 @@ export default function FridgePage() {
   const [selectedItem, setSelectedItem] = useState(null)
   const [activeTab, setActiveTab]       = useState('fridge') // fridge | nutrition | summary
   const [time, setTime]                 = useState(new Date())
-  const [indexing, setIndexing]         = useState(false)
   // 시계 업데이트
   useEffect(() => {
     const t = setInterval(() => setTime(new Date()), 1000)
@@ -64,21 +64,6 @@ export default function FridgePage() {
       setError('영양 매칭 중 오류가 발생했습니다.')
     }
     setLoading(false)
-  }
-
-  // ── 식품 DB 인덱싱 ────────────────────────────
-  const handleIndex = async () => {
-    if (indexing) return
-    setIndexing(true)
-    setError(null)
-    try {
-      const res = await indexFoodDatabase()
-      alert(res?.msg ?? '인덱싱 완료')
-    } catch (e) {
-      console.error(e)
-      setError('인덱싱 중 오류가 발생했습니다.')
-    }
-    setIndexing(false)
   }
 
   const removeIngredient = (name) => {
@@ -145,19 +130,6 @@ export default function FridgePage() {
           {/* ════ 냉장고 탭 ════ */}
           {activeTab === 'fridge' && (
               <div style={css.fadeIn}>
-                {/* 액션 바 */}
-                <div style={css.addBar}>
-                  <button style={css.addBtn} onClick={fetchAll}>🔃 새로고침</button>
-                  <button
-                      style={{ ...css.addBtn, borderColor: '#4a7c5e', color: '#4a7c5e', opacity: indexing ? 0.5 : 1 }}
-                      onClick={handleIndex}
-                      disabled={indexing}
-                      title="식품 DB를 Pinecone에 인덱싱합니다 (최초 1회 또는 갱신 시 실행)"
-                  >
-                    {indexing ? '인덱싱 중…' : '🔄 DB 인덱싱'}
-                  </button>
-                </div>
-
                 {/* 냉장고 그리드 */}
                 <div style={css.fridgeGrid}>
                   {data.map((item, i) => (
@@ -244,7 +216,7 @@ function IngredientCard({ item, index, maxKcal, selected, onClick, onRemove }) {
             title="삭제"
         >✕</button>
 
-        <div style={css.ingEmoji}>{getFoodEmoji(item.name)}</div>
+        <div style={css.ingEmoji}>{getEmoji(item.name)}</div>
         <div style={css.ingName}>{item.name}</div>
         <div style={css.ingGroup}>{item.group || '기타'}</div>
 
@@ -290,7 +262,7 @@ function DetailPanel({ item, onClose }) {
       <div style={css.detailPanel} className="hub-slide-up">
         <button style={css.detailClose} onClick={onClose}>✕ 닫기</button>
         <div style={css.detailHeader}>
-          <span style={css.detailEmoji}>{getFoodEmoji(item.name)}</span>
+          <span style={css.detailEmoji}>{getEmoji(item.name)}</span>
           <div>
             <div style={css.detailName}>{item.name}</div>
             <div style={css.detailDbName}>{item.dbName} · {item.serving} 기준</div>
@@ -336,7 +308,7 @@ function NutritionCard({ item, index }) {
           className="hub-card"
       >
         <div style={css.nutrHeader}>
-          <span style={css.nutrEmoji}>{getFoodEmoji(item.name)}</span>
+          <span style={css.nutrEmoji}>{getEmoji(item.name)}</span>
           <div>
             <div style={css.nutrName}>{item.name}</div>
             <div style={css.nutrServing}>{item.serving} 기준</div>
@@ -454,7 +426,7 @@ function SummaryPanel({ totals, data }) {
             return (
                 <div key={item.name} style={css.rankRow}>
                   <span style={css.rankNum}>{i + 1}</span>
-                  <span style={css.rankEmoji}>{getFoodEmoji(item.name)}</span>
+                  <span style={css.rankEmoji}>{getEmoji(item.name)}</span>
                   <span style={css.rankName}>{item.name}</span>
                   <div style={css.rankBarBg}>
                     <div style={{ ...css.rankBarFill, width: `${barW}%` }} />
@@ -480,17 +452,6 @@ function FreshIcon() {
 
 // ── 헬퍼 ─────────────────────────────────────
 const fmt1 = (n) => Number(Number(n).toFixed(1))
-
-function getFoodEmoji(name) {
-  const map = {
-    당근: '🥕', 계란: '🥚', 브로콜리: '🥦', 우유: '🥛', 닭가슴살: '🍗',
-    토마토: '🍅', 사과: '🍎', 바나나: '🍌', 시금치: '🥬', 두부: '🍱',
-    돼지고기: '🥩', 소고기: '🥩', 연어: '🐟', 고구마: '🍠', 감자: '🥔',
-    양파: '🧅', 마늘: '🧄', 버섯: '🍄', 파: '🌿', 오이: '🥒',
-    치즈: '🧀', 요거트: '🫙', 버터: '🧈', 새우: '🦐', 오렌지: '🍊',
-  }
-  return map[name] || '🧊'
-}
 
 // ════════════════════════════════════════════
 //  스타일 정의

@@ -70,7 +70,8 @@
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 12px;
     padding: 2rem;
-    margin-bottom: 3rem;
+    margin: 0 auto 3rem;
+    max-width: 720px;
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
 }
 
@@ -150,6 +151,8 @@
     display: grid;
     grid-template-columns: 1fr;
     gap: 2rem;
+    max-width: 720px;
+    margin: 0 auto;
 }
 
 .card {
@@ -220,6 +223,15 @@
 
 .recipeLine .icon {
     color: var(--primary-color, #2ECC71);
+}
+
+.recipeThumb {
+    width: 48px;
+    height: 34px;
+    object-fit: cover;
+    border-radius: 5px;
+    flex-shrink: 0;
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .recipeName {
@@ -342,4 +354,258 @@
 
 .replySubmitBtn:hover {
     color: var(--primary-color, #2ECC71);
+}
+
+/* ── 커스텀 드롭다운 (썸네일 지원) ───────────────────────────────── */
+.customSelect {
+    position: relative;
+    width: 100%;
+}
+
+.customSelectTrigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 1px solid #333;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    box-sizing: border-box;
+    text-align: left;
+    transition: border-color 0.2s;
+    min-height: 52px;
+}
+
+.customSelectTrigger:hover:not(:disabled) {
+    border-color: #555;
+}
+
+.customSelectTrigger:focus {
+    outline: none;
+    border-color: var(--primary-color, #2ECC71);
+}
+
+.customSelectTrigger:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.placeholder {
+    color: #888;
+    font-size: 1rem;
+}
+
+.selectIcon {
+    color: #888;
+    flex-shrink: 0;
+    margin-left: 10px;
+    transition: transform 0.2s ease;
+}
+
+.selectIconOpen {
+    transform: rotate(180deg);
+}
+
+.dropdownList {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background-color: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    max-height: 280px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.dropdownItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: background-color 0.15s;
+    font-size: 0.95rem;
+    color: #ddd;
+}
+
+.dropdownItem:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.dropdownItemSelected {
+    background-color: rgba(46, 204, 113, 0.1);
+    color: var(--primary-color, #2ECC71);
+}
+
+.dropdownItemInner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.dropdownItemInner span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dropdownItem span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.thumbImg {
+    width: 56px;
+    height: 36px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+    background-color: #2a2a2a;
+}
+
+.thumbPlaceholder {
+    width: 56px;
+    height: 36px;
+    border-radius: 4px;
+    background-color: #2a2a2a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #555;
+}
+
+/* ── 힌트 / 에러 ───────────────────────────────────────────────────── */
+.emptyHint {
+    font-size: 0.82rem;
+    color: #888;
+    margin-top: 6px;
+}
+
+.formError {
+    color: #ff6b6b;
+    font-size: 0.88rem;
+    margin-bottom: 8px;
+}
+
+/* ── 로딩 / 빈 상태 ────────────────────────────────────────────────── */
+.loadingCenter {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 60px 0;
+    color: #888;
+    font-size: 0.95rem;
+}
+
+.loadingRing {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.07);
+    border-top-color: #2ECC71;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 80px 0;
+    color: #aaa;
+    font-size: 1rem;
+}
+
+/* ── 제출 중 스피너 ─────────────────────────────────────────────────── */
+.spinner {
+    animation: spin 0.8s linear infinite;
+}
+
+.submitBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ── 이미지 업로드 ───────────────────────────────────────────────────── */
+.imageUploadBtn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 28px 0;
+    background-color: rgba(0, 0, 0, 0.15);
+    border: 2px dashed #333;
+    border-radius: 8px;
+    color: #888;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+}
+
+.imageUploadBtn:hover {
+    border-color: var(--primary-color, #2ECC71);
+    color: var(--primary-color, #2ECC71);
+}
+
+.imagePreviewWrapper {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+.imagePreview {
+    width: 100%;
+    max-height: 300px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #333;
+    display: block;
+}
+
+.imageRemoveBtn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background-color: rgba(0, 0, 0, 0.6);
+    border: none;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #fff;
+    transition: background-color 0.2s;
+}
+
+.imageRemoveBtn:hover {
+    background-color: rgba(255, 60, 60, 0.8);
+}
+
+/* ── 리뷰 카드 사진 ─────────────────────────────────────────────────── */
+.reviewImage {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-top: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    display: block;
 }

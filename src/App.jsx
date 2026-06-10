@@ -19,6 +19,7 @@ import ShoppingPage from './pages/ShoppingPage'
 import CookingPage  from './pages/CookingPage'
 import FridgePage   from './pages/FridgePage'
 import ReviewPage   from './pages/ReviewPage'
+import MyPage       from './pages/MyPage'
 
 export default function App() {
   const checkSession = useAuthStore(s => s.checkSession)
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="cooking"  element={<PrivateRoute><CookingPage /></PrivateRoute>} />
           <Route path="fridge"   element={<PrivateRoute><FridgePage /></PrivateRoute>} />
           <Route path="review"   element={<PrivateRoute><ReviewPage /></PrivateRoute>} />
+          <Route path="mypage"   element={<PrivateRoute><MyPage /></PrivateRoute>} />
         </Route>
 
       </Routes>

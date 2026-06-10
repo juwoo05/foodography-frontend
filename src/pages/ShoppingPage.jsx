@@ -1,55 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ShoppingCart, ExternalLink, Trash2, CheckCircle, TrendingDown, Zap, Package, AlertTriangle } from 'lucide-react'
-import { useAppStore } from '../store/appStore'
-import { fetchPrices } from '../utils/api'
+import { ExternalLink, ShoppingCart, Trash2, Package, TrendingDown, RefreshCw, AlertTriangle } from 'lucide-react'
+import { searchShopping, addToCart, fetchCart, removeCartItem, clearCartApi } from '../utils/api'
 import styles from './ShoppingPage.module.css'
 
-// Mock price data
-const MOCK_PRICES = [
-  {
-    ingredient: '간장',
-    image: 'https://images.unsplash.com/photo-1624657082850-67e5f3d5a0b1?w=120&h=120&fit=crop&auto=format',
-    markets: [
-      { name: '쿠팡', price: 3200, url: 'https://www.coupang.com', fastDelivery: true, logo: '🛒' },
-      { name: '마켓컬리', price: 3500, url: 'https://www.kurly.com', fastDelivery: true, logo: '🌿' },
-      { name: '이마트', price: 3100, url: 'https://www.emart.com', fastDelivery: false, logo: '🏪' },
-    ],
-  },
-  {
-    ingredient: '설탕',
-    image: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=120&h=120&fit=crop&auto=format',
-    markets: [
-      { name: '쿠팡', price: 1800, url: 'https://www.coupang.com', fastDelivery: true, logo: '🛒' },
-      { name: '마켓컬리', price: 2100, url: 'https://www.kurly.com', fastDelivery: true, logo: '🌿' },
-      { name: '이마트', price: 1700, url: 'https://www.emart.com', fastDelivery: false, logo: '🏪' },
-    ],
-  },
-]
+// ── 순위 뱃지 색상 (1위=금, 2위=은, 3위=동) ─────────────────────────────────
+const RANK_COLOR = ['#f59e0b', '#94a3b8', '#b45309']
 
-// Ingredient image map for enriching API data
-const INGREDIENT_IMAGES = {
-  '간장': 'https://images.unsplash.com/photo-1624657082850-67e5f3d5a0b1?w=120&h=120&fit=crop&auto=format',
-  '설탕': 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=120&h=120&fit=crop&auto=format',
-  '소금': 'https://images.unsplash.com/photo-1515543237350-b3eea1ec8082?w=120&h=120&fit=crop&auto=format',
-  '달걀': 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=120&h=120&fit=crop&auto=format',
-  '우유': 'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=120&h=120&fit=crop&auto=format',
-  '버터': 'https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?w=120&h=120&fit=crop&auto=format',
-  '마늘': 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=120&h=120&fit=crop&auto=format',
-  '양파': 'https://images.unsplash.com/photo-1508747703725-719777637510?w=120&h=120&fit=crop&auto=format',
-  '감자': 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=120&h=120&fit=crop&auto=format',
-  '당근': 'https://images.unsplash.com/photo-1447175008436-054170c2e979?w=120&h=120&fit=crop&auto=format',
-  '돼지고기': 'https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?w=120&h=120&fit=crop&auto=format',
-  '닭고기': 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=120&h=120&fit=crop&auto=format',
-  '소고기': 'https://images.unsplash.com/photo-1551135049-8a33b5883817?w=120&h=120&fit=crop&auto=format',
-  '두부': 'https://images.unsplash.com/photo-1645690183361-3ddfb83f7f77?w=120&h=120&fit=crop&auto=format',
-  '김치': 'https://images.unsplash.com/photo-1583224994559-0d1c87ec0025?w=120&h=120&fit=crop&auto=format',
-}
-
-const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=120&h=120&fit=crop&auto=format'
-const USE_MOCK = true
-
-// ── Confirm Modal ───────────────────────────────────────────────────
+// ── Confirm Modal ─────────────────────────────────────────────────────────
 function ConfirmModal({ open, config, onConfirm, onCancel }) {
   if (!open) return null
   const variant = config.variant ?? 'warn'
@@ -77,148 +34,153 @@ function ConfirmModal({ open, config, onConfirm, onCancel }) {
   )
 }
 
-// ── Main Page ───────────────────────────────────────────────────────
+// ── Main Page ──────────────────────────────────────────────────────────────
 export default function ShoppingPage() {
-  const navigate = useNavigate()
-  const selectedRecipe = useAppStore((s) => s.selectedRecipe)
-  const cartItems      = useAppStore((s) => s.cartItems)
-  const addToCart      = useAppStore((s) => s.addToCart)
-  const removeFromCart = useAppStore((s) => s.removeFromCart)
-  const clearCart      = useAppStore((s) => s.clearCart)
-
-  const [priceData, setPriceData] = useState([])
-  const [loading,   setLoading]   = useState(false)
-  const [activeTab, setActiveTab] = useState('coupang')
-  const [confirmed, setConfirmed] = useState(false)
+  const [searchData,   setSearchData]   = useState([])   // List<IngredientSearchDTO>
+  const [cartItems,    setCartItems]    = useState([])   // List<ShoppingDTO>
+  const [loading,      setLoading]      = useState(false)
+  const [cartLoading,  setCartLoading]  = useState({})   // { 'ingredient-rank': bool }
+  const [error,        setError]        = useState(null)
   const [confirmModal, setConfirmModal] = useState({ open: false, config: {}, onConfirm: null })
 
-  const openConfirm  = (config, fn) => setConfirmModal({ open: true, config, onConfirm: fn })
-  const closeConfirm = () => setConfirmModal({ open: false, config: {}, onConfirm: null })
+  const openConfirm    = (config, fn) => setConfirmModal({ open: true, config, onConfirm: fn })
+  const closeConfirm   = () => setConfirmModal({ open: false, config: {}, onConfirm: null })
   const handleConfirmOk = () => { confirmModal.onConfirm?.(); closeConfirm() }
 
-  const missingItems = selectedRecipe
-    ? (selectedRecipe.missingIngredients ?? MOCK_PRICES.map(p => p.ingredient))
-    : []
+  useEffect(() => { loadAll() }, [])
 
-  useEffect(() => {
-    if (!missingItems.length) return
+  const loadAll = async () => {
     setLoading(true)
-    const load = async () => {
-      try {
-        const raw = USE_MOCK
-          ? await new Promise(r => setTimeout(() => r(MOCK_PRICES), 800))
-          : await fetchPrices(missingItems)
-        const data = raw.map(item => ({
-          ...item,
-          image: item.image ?? INGREDIENT_IMAGES[item.ingredient] ?? DEFAULT_IMAGE,
-        }))
-        setPriceData(data)
-        data.forEach(item => {
-          const best = [...item.markets].sort((a, b) => a.price - b.price)[0]
-          addToCart({ id: item.ingredient, name: item.ingredient, price: best.price, market: best.name })
-        })
-      } finally {
-        setLoading(false)
-      }
+    setError(null)
+    try {
+      const [search, cart] = await Promise.all([searchShopping(), fetchCart()])
+      setSearchData(search)
+      setCartItems(cart)
+    } catch (e) {
+      console.error(e)
+      setError('데이터를 불러오는 중 오류가 발생했습니다.')
+    } finally {
+      setLoading(false)
     }
-    load()
-  }, [selectedRecipe])
-
-  const totalCart = cartItems.reduce((s, i) => s + i.price, 0)
-
-  const TABS = [
-    { key: 'coupang', label: '💰 최적가',    deepLink: 'https://www.coupang.com/np/search?q=' },
-    { key: 'kurly',   label: '💬 후기순', deepLink: 'https://www.kurly.com/search?sword=' },
-    { key: 'emart',   label: '⭐ 별점순', deepLink: 'https://emart.ssg.com/search/result.ssg?target=all&query=' },
-  ]
-
-  const doDeepLink = (base) => {
-    const query = encodeURIComponent(cartItems.map(i => i.name).join(' '))
-    window.open(base + query, '_blank', 'noopener')
-    setConfirmed(true)
   }
 
-  // ── Button handlers with confirm dialogs ─────────────────────────
-  const handleDeepLinkClick = () => {
-    const tab = TABS.find(t => t.key === activeTab)
-    openConfirm(
-      {
-        variant: 'primary',
-        icon: <ExternalLink size={22} />,
-        title: `${tab.label}로 이동할까요?`,
-        desc: `장바구니 ${cartItems.length}개 항목을 검색하는 페이지가 새 탭으로 열립니다.`,
-        okLabel: '이동하기',
-      },
-      () => doDeepLink(tab.deepLink)
-    )
+  // 장바구니 담기
+  const handleAddToCart = async (item) => {
+    const key = `${item.ingredient}-${item.sortType}`
+    setCartLoading(prev => ({ ...prev, [key]: true }))
+    try {
+      const saved = await addToCart(item)
+      setCartItems(prev => [saved, ...prev])
+    } catch (e) {
+      console.error('[쇼핑] 장바구니 추가 실패:', e.message)
+    } finally {
+      setCartLoading(prev => ({ ...prev, [key]: false }))
+    }
   }
 
-  const handleRemoveItem = (item) => {
+  // 단일 삭제
+  const handleRemove = (item) => {
     openConfirm(
       {
         variant: 'danger',
         icon: <Trash2 size={22} />,
         title: '항목을 삭제할까요?',
-        desc: `"${item.name}"을 장바구니에서 제거합니다.`,
+        desc: `"${item.ingredient}" 상품을 장바구니에서 제거합니다.`,
         okLabel: '삭제',
       },
-      () => removeFromCart(item.id)
+      async () => {
+        try {
+          await removeCartItem(item.cartId)
+          setCartItems(prev => prev.filter(i => i.cartId !== item.cartId))
+        } catch (e) { console.error(e) }
+      }
     )
   }
 
+  // 전체 비우기
   const handleClearCart = () => {
     openConfirm(
       {
         variant: 'danger',
         icon: <Trash2 size={22} />,
         title: '장바구니를 비울까요?',
-        desc: `담긴 ${cartItems.length}개 항목이 모두 삭제됩니다. 되돌릴 수 없어요.`,
+        desc: `담긴 ${cartItems.length}개 항목이 모두 삭제됩니다.`,
         okLabel: '전체 삭제',
       },
-      () => clearCart()
+      async () => {
+        try {
+          await clearCartApi()
+          setCartItems([])
+        } catch (e) { console.error(e) }
+      }
     )
   }
 
+  const totalPrice = cartItems.reduce((sum, item) => sum + (parseInt(item.lprice) || 0), 0)
+
   return (
     <div className={styles.page}>
+
+      {/* ── 헤더 ── */}
       <header className={styles.header}>
-        <div>
-          <h1 className={styles.title}>쇼핑 가이드</h1>
+        <div className={styles.headerLeft}>
+          <h1 className={styles.title}>🛒 쇼핑 가이드</h1>
           <p className={styles.sub}>
-            {selectedRecipe
-              ? `"${selectedRecipe.title}" 에 필요한 재료를 구매해요`
-              : '장바구니에 담긴 재료를 구매해요'}
+            최신 레시피에 필요한 추가 재료를 네이버 쇼핑에서 비교합니다
           </p>
         </div>
+        <button className={styles.refreshBtn} onClick={loadAll} disabled={loading}>
+          <RefreshCw size={15} className={loading ? styles.spinning : ''} />
+          새로고침
+        </button>
       </header>
 
+      {error && (
+        <div className={styles.errorBanner}>
+          <AlertTriangle size={14} /> {error}
+          <button onClick={() => setError(null)}>✕</button>
+        </div>
+      )}
+
       <div className={styles.layout}>
-        {/* Left — Price comparison */}
+
+        {/* ── 왼쪽: 검색 결과 ── */}
         <div className={styles.priceSection}>
           <h2 className={styles.sectionTitle}>
             <TrendingDown size={16} />
-            가격 비교
+            네이버 쇼핑 검색 결과
+            {!loading && searchData.length > 0 && (
+              <span className={styles.cartCount}>{searchData.length}개 재료</span>
+            )}
           </h2>
 
           {loading ? (
             <div className={styles.loadingGrid}>
-              {[1, 2].map(i => (
-                <div key={i} className={`${styles.priceCard} skeleton`} style={{ height: 180 }} />
+              {[1, 2, 3].map(i => (
+                <div key={i} className={`${styles.priceCard} ${styles.skeletonCard}`} />
               ))}
+            </div>
+          ) : searchData.length === 0 ? (
+            <div className={styles.noData}>
+              <Package size={36} />
+              <p>추가로 구매할 재료가 없습니다.</p>
+              <small>레시피를 먼저 선택해주세요.</small>
             </div>
           ) : (
             <div className={styles.priceGrid}>
-              {priceData.map(item => (
-                <PriceCard key={item.ingredient} item={item} />
+              {searchData.map(group => (
+                <IngredientGroup
+                  key={group.ingredient}
+                  group={group}
+                  cartLoading={cartLoading}
+                  onAddToCart={handleAddToCart}
+                />
               ))}
-              {!priceData.length && (
-                <div className={styles.noData}>가격 정보가 없습니다.</div>
-              )}
             </div>
           )}
         </div>
 
-        {/* Right — Cart */}
+        {/* ── 오른쪽: 장바구니 ── */}
         <div className={styles.cartSection}>
           <h2 className={styles.sectionTitle}>
             <ShoppingCart size={16} />
@@ -235,51 +197,17 @@ export default function ShoppingPage() {
             <>
               <div className={styles.cartList}>
                 {cartItems.map(item => (
-                  <div key={item.id} className={styles.cartItem}>
-                    <div className={styles.cartItemInfo}>
-                      <span className={styles.cartItemName}>{item.name}</span>
-                      <span className={styles.cartItemMarket}>{item.market}</span>
-                    </div>
-                    <span className={styles.cartItemPrice}>{item.price.toLocaleString()}원</span>
-                    <button className={styles.removeBtn} onClick={() => handleRemoveItem(item)}>
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
+                  <CartItem key={item.cartId} item={item} onRemove={handleRemove} />
                 ))}
               </div>
 
               <div className={styles.totalRow}>
-                <span>예상 총 금액</span>
-                <span className={styles.totalPrice}>{totalCart.toLocaleString()}원</span>
+                <span>예상 합계</span>
+                <span className={styles.totalPrice}>{totalPrice.toLocaleString()}원</span>
               </div>
-
-              <div className={styles.marketTabs}>
-                {TABS.map(tab => (
-                  <button
-                    key={tab.key}
-                    className={`${styles.marketTab} ${activeTab === tab.key ? styles.marketTabActive : ''}`}
-                    onClick={() => setActiveTab(tab.key)}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-
-              <button className={styles.deepLinkBtn} onClick={handleDeepLinkClick}>
-                <ExternalLink size={16} />
-                {TABS.find(t => t.key === activeTab)?.label} 장바구니에 담기
-              </button>
-
-              <p className={styles.deepLinkNote}>클릭 시 새 탭으로 해당 쇼핑몰이 열립니다</p>
-
-              {confirmed && (
-                <div className={styles.confirmedBanner}>
-                  <CheckCircle size={16} />
-                  쇼핑몰 페이지가 열렸어요! 장바구니에서 결제를 완료해 주세요.
-                </div>
-              )}
 
               <button className={styles.clearBtn} onClick={handleClearCart}>
+                <Trash2 size={13} />
                 장바구니 비우기
               </button>
             </>
@@ -297,56 +225,106 @@ export default function ShoppingPage() {
   )
 }
 
-// ── PriceCard with ingredient image ────────────────────────────────
-function PriceCard({ item }) {
-  const sorted   = [...item.markets].sort((a, b) => a.price - b.price)
-  const minPrice = sorted[0].price
-  const [imgErr, setImgErr] = useState(false)
-
+// ── 재료 그룹 카드 ─────────────────────────────────────────────────────────
+function IngredientGroup({ group, cartLoading, onAddToCart }) {
   return (
     <div className={styles.priceCard}>
-      <div className={styles.priceCardHeader}>
-        <div className={styles.ingredientImageWrap}>
-          {!imgErr ? (
-            <img
-              src={item.image}
-              alt={item.ingredient}
-              className={styles.ingredientImage}
-              onError={() => setImgErr(true)}
-            />
-          ) : (
-            <div className={styles.ingredientImageFallback}>
-              <Package size={22} />
-            </div>
-          )}
-        </div>
-        <div className={styles.ingredientMeta}>
-          <span className={styles.ingredientName}>{item.ingredient}</span>
-          <span className={styles.bestPrice}>최저 {minPrice.toLocaleString()}원</span>
-        </div>
+      <div className={styles.ingredientHeader}>
+        <span className={styles.ingredientName}>{group.ingredient}</span>
+        <span className={styles.ingredientCount}>{group.results.length}개 결과</span>
       </div>
-
-      <div className={styles.marketList}>
-        {sorted.map((m, i) => (
-          <a
-            key={m.name}
-            href={m.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`${styles.marketRow} ${i === 0 ? styles.bestMarket : ''}`}
-          >
-            <span className={styles.marketLogo}>{m.logo}</span>
-            <span className={styles.marketName}>{m.name}</span>
-            {m.fastDelivery && (
-              <span className={styles.fastTag}>
-                <Zap size={10} /> 빠른배송
-              </span>
-            )}
-            <span className={styles.marketPrice}>{m.price.toLocaleString()}원</span>
-            {i === 0 && <span className={styles.cheapestBadge}>최저가</span>}
-          </a>
+      <div className={styles.resultList}>
+        {group.results.map((item, idx) => (
+          <NaverItemRow
+            key={item.sortType}
+            item={item}
+            rank={idx}
+            loading={!!cartLoading[`${item.ingredient}-${item.sortType}`]}
+            onAddToCart={onAddToCart}
+          />
         ))}
       </div>
+    </div>
+  )
+}
+
+// ── 상품 행 (컴팩트 가로 레이아웃) ───────────────────────────────────────
+function NaverItemRow({ item, rank, loading, onAddToCart }) {
+  const [imgErr, setImgErr] = useState(false)
+  const price  = item.lprice ? parseInt(item.lprice).toLocaleString() + '원' : '—'
+  const color  = RANK_COLOR[rank] ?? RANK_COLOR[2]
+
+  return (
+    <div className={styles.naverRow}>
+
+      {/* 순위 번호 */}
+      <span className={styles.rankBadge} style={{ color, borderColor: color + '55' }}>
+        {rank + 1}
+      </span>
+
+      {/* 상품 이미지 */}
+      <a href={item.link} target="_blank" rel="noopener noreferrer" className={styles.rowImgWrap}>
+        {!imgErr && item.image ? (
+          <img src={item.image} alt={item.title} className={styles.rowImg} onError={() => setImgErr(true)} />
+        ) : (
+          <div className={styles.rowImgFallback}><Package size={14} /></div>
+        )}
+      </a>
+
+      {/* 상품 정보 */}
+      <div className={styles.rowInfo}>
+        <a href={item.link} target="_blank" rel="noopener noreferrer" className={styles.rowTitle}>
+          {item.title}
+        </a>
+        <span className={styles.rowMall}>{item.mallName}</span>
+      </div>
+
+      {/* 가격 */}
+      <span className={styles.rowPrice}>{price}</span>
+
+      {/* 담기 버튼 */}
+      <button
+        className={styles.rowCartBtn}
+        onClick={() => onAddToCart(item)}
+        disabled={loading}
+        title="장바구니 담기"
+      >
+        {loading ? '…' : <ShoppingCart size={13} />}
+      </button>
+    </div>
+  )
+}
+
+// ── 장바구니 항목 행 ──────────────────────────────────────────────────────
+function CartItem({ item, onRemove }) {
+  return (
+    <div className={styles.cartItem}>
+      {item.image ? (
+        <img src={item.image} alt={item.title} className={styles.cartThumb} onError={e => { e.target.style.display='none' }} />
+      ) : (
+        <div className={styles.cartThumbFallback}><Package size={14} /></div>
+      )}
+
+      <div className={styles.cartItemInfo}>
+        <div className={styles.cartItemIngredient}>{item.ingredient}</div>
+        <a
+          href={item.link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.cartItemTitle}
+        >
+          {item.title} <ExternalLink size={10} style={{ display: 'inline', verticalAlign: 'middle' }} />
+        </a>
+        <span className={styles.cartItemMarket}>{item.mallName}</span>
+      </div>
+
+      <span className={styles.cartItemPrice}>
+        {item.lprice ? parseInt(item.lprice).toLocaleString() + '원' : '-'}
+      </span>
+
+      <button className={styles.removeBtn} onClick={() => onRemove(item)} title="삭제">
+        <Trash2 size={13} />
+      </button>
     </div>
   )
 }
