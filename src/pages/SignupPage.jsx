@@ -1,11 +1,31 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Check, RefreshCw } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, User, Phone, MapPin, ArrowRight, Check, RefreshCw } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import Navbar from '../components/layout/Navbar'
 import ValidationModal from '../components/ui/ValidationModal'
 import styles from './AuthPage.module.css'
 import { checkEmailExists, sendAuthCode, verifyAuthCode, registerUser } from '../utils/api'
+
+function openAddressSearch(onSelect) {
+  const load = () => {
+    new window.daum.Postcode({
+      oncomplete(data) {
+        onSelect(data.roadAddress || data.jibunAddress)
+      },
+    }).open()
+  }
+
+  if (window.daum?.Postcode) {
+    load()
+    return
+  }
+
+  const script = document.createElement('script')
+  script.src = 'https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js'
+  script.onload = load
+  document.head.appendChild(script)
+}
 
 const PW_RULES = [
   { label: '6자 이상',  test: pw => pw.length >= 6 },
@@ -58,6 +78,7 @@ export default function SignupPage() {
   const [showPw,   setShowPw]   = useState(false)
   const [agree,    setAgree]    = useState(false)
   const [phone,    setPhone]    = useState('')
+  const [address,  setAddress]  = useState('')
 
   // ── 이메일 중복 확인 상태 ────────────────────────────────────────
   const [dupChecked,  setDupChecked]  = useState(false)  // 중복 확인 완료
@@ -172,7 +193,7 @@ export default function SignupPage() {
     if (errs.length) { setModalErrs(errs); setModalOpen(true); return }
 
     try {
-      const data = await registerUser(name, email, phone, password)
+      const data = await registerUser(name, email, phone, password, address)
       if (data.result === 1) {
         setSuccessModal(true)
       } else {
@@ -229,6 +250,33 @@ export default function SignupPage() {
                 {phone.replace(/\D/g,'').length >= 10 && (
                   <Check size={15} style={{ color: '#2ECC71', flexShrink: 0 }} />
                 )}
+              </div>
+            </div>
+
+            {/* ── 도로명주소 ── */}
+            <div className={styles.fieldWrap}>
+              <label className={styles.label}>
+                도로명주소 <span style={{ color: '#8B949E', fontSize: 12 }}>(선택)</span>
+              </label>
+              <div className={styles.inputRowWrap}>
+                <div className={styles.inputWrap} style={{ flex: 1 }}>
+                  <MapPin size={16} className={styles.inputIcon} />
+                  <input
+                    type="text"
+                    className={styles.input}
+                    placeholder="주소 검색 버튼을 눌러주세요"
+                    value={address}
+                    readOnly
+                  />
+                  {address && <Check size={15} style={{ color: '#2ECC71', flexShrink: 0 }} />}
+                </div>
+                <button
+                  type="button"
+                  className={styles.inlineBtn}
+                  onClick={() => openAddressSearch(setAddress)}
+                >
+                  주소 검색
+                </button>
               </div>
             </div>
 

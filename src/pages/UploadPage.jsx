@@ -22,6 +22,26 @@ const TIPS = [
   { emoji: '📐', text: '재료가 겹치지 않게 정리 후 촬영하면 좋아요' },
 ]
 
+const SUPPORTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+
+function toJpeg(file) {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width  = img.width
+      canvas.height = img.height
+      canvas.getContext('2d').drawImage(img, 0, 0)
+      canvas.toBlob(blob => {
+        const name = file.name.replace(/\.[^.]+$/, '.jpg')
+        resolve(new File([blob], name, { type: 'image/jpeg' }))
+      }, 'image/jpeg', 0.92)
+      URL.revokeObjectURL(img.src)
+    }
+    img.src = URL.createObjectURL(file)
+  })
+}
+
 export default function UploadPage() {
   const navigate   = useNavigate()
   const fileRef    = useRef(null)
@@ -40,15 +60,19 @@ export default function UploadPage() {
     return () => clearTimeout(t)
   }, [])
 
-  const processFile = useCallback(async (file) => {
-    if (!file?.type.startsWith('image/')) {
+  const processFile = useCallback(async (rawFile) => {
+    if (!rawFile?.type.startsWith('image/')) {
       setError('이미지 파일만 업로드할 수 있어요.')
       return
     }
-    if (file.size > 20 * 1024 * 1024) {
+    if (rawFile.size > 20 * 1024 * 1024) {
       setError('파일 크기는 20MB 이하여야 해요.')
       return
     }
+
+    // AVIF·HEIC 등 비표준 포맷은 JPEG로 변환
+    const file = SUPPORTED_TYPES.includes(rawFile.type) ? rawFile : await toJpeg(rawFile)
+
     setError(null)
     setUploading(true)
 

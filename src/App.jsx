@@ -22,10 +22,10 @@ import ReviewPage   from './pages/ReviewPage'
 import MyPage       from './pages/MyPage'
 
 export default function App() {
-  const checkSession = useAuthStore(s => s.checkSession)
+  const initAuth = useAuthStore(s => s.initAuth)
 
   useEffect(() => {
-    checkSession()   // 새로고침 포함, 앱 시작 시 딱 한 번 JWT 쿠키 유효성 확인
+    initAuth()   // 새로고침 포함, 앱 시작 시 딱 한 번 JWT 쿠키 유효성 확인
   }, [])
 
   return (

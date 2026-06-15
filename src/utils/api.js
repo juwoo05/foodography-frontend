@@ -13,7 +13,7 @@ const userApi = axios.create({
 // 401 전역 인터셉터 — AT 만료 시 RT로 자동 재발급 후 원 요청 재시도
 //
 // 재발급 제외 URL:
-//   sessionCheck  → 비로그인 정상 케이스, authStore 가 직접 처리
+//   token/verify  → 비로그인 정상 케이스, authStore 가 직접 처리
 //   refresh       → 재발급 자체가 실패하면 무한 루프 방지
 //   loginProc     → 로그인 실패는 401이 아닌 result:0 으로 처리
 
@@ -33,7 +33,7 @@ userApi.interceptors.response.use(
     if (status !== 401) return Promise.reject(err)
 
     // 재발급 시도하지 않을 URL
-    const skipUrls = ['/api/user/sessionCheck', '/api/user/refresh', '/api/user/loginProc']
+    const skipUrls = ['/api/user/token/verify', '/api/user/refresh', '/api/user/loginProc']
     const isSkip   = skipUrls.some(u => url.includes(u))
 
     // 로그인·회원가입 페이지 요청도 제외
@@ -41,8 +41,8 @@ userApi.interceptors.response.use(
     const isPublicPage = publicPaths.some(p => window.location.pathname.startsWith(p))
 
     if (isSkip || isPublicPage) {
-      // sessionCheck·public 이외의 skip URL에서 401 → 로그인으로
-      if (!url.includes('/api/user/sessionCheck') && !isPublicPage) {
+      // token/verify·public 이외의 skip URL에서 401 → 로그인으로
+      if (!url.includes('/api/user/token/verify') && !isPublicPage) {
         window.location.href = '/login'
       }
       return Promise.reject(err)
@@ -112,12 +112,21 @@ export async function verifyAuthCode(email, code) {
 }
 
 // ── 회원가입 ──────────────────────────────────────
-export async function registerUser(userName, email, phoneNum, password) {
+export async function registerUser(userName, email, phoneNum, password, address = '') {
   const res = await userApi.post(
       '/api/user/insertUserInfo',
-      new URLSearchParams({ userName, email, phoneNum, password })
+      new URLSearchParams({ userName, email, phoneNum, password, address })
   )
   return res.data  // { result: 1, msg: '회원가입되었습니다.' }
+}
+
+// ── 주소 변경 (마이페이지) ───────────────────────
+export async function updateAddress(address) {
+  const res = await userApi.post(
+      '/api/user/updateAddress',
+      new URLSearchParams({ address })
+  )
+  return res.data  // { result: 1, msg: '주소가 변경되었습니다.' }
 }
 
 // ── 로그인 ────────────────────────────────────────
@@ -131,8 +140,8 @@ export async function loginUser(email, password) {
 
 // ── 토큰 유효성 확인 ─────────────────────────────
 // JWT 쿠키가 유효하면 서버가 클레임에서 사용자 정보 추출해 반환
-export async function sessionCheck() {
-  const res = await userApi.get('/api/user/sessionCheck')
+export async function verifyToken() {
+  const res = await userApi.get('/api/user/token/verify')
   return res.data  // { userId, userName, existYn: 'Y' } 또는 401
 }
 

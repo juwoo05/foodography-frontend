@@ -31,6 +31,7 @@ export default function RecipesPage() {
   const [successModal, setSuccessModal] = useState({ open: false, recipeName: '', itemCount: 0, totalCost: 0 })
   // 영상 요약 로딩 오버레이
   const [videoLoading, setVideoLoading] = useState({ active: false, title: '' })
+  const [videoError,   setVideoError]   = useState({ active: false, recipe: null })
 
   const sorted = useMemo(() => {
     if (!recipes.length) return []
@@ -61,12 +62,12 @@ export default function RecipesPage() {
       const steps = await fetchVideoSummary(recipe.youtube_url, recipe.scanId ?? '')
       console.log('[RecipesPage] 영상 요약 수신 완료 | steps:', steps)
       setSelectedRecipe({ ...recipe, recipe_video_summary: steps })
-    } catch (err) {
-      // 실패해도 CookingPage는 열어줌 (타임라인 없이)
-      console.error('[RecipesPage] 영상 요약 실패:', err?.message ?? err)
-    } finally {
       setVideoLoading({ active: false, title: '' })
       navigate('/cooking')
+    } catch (err) {
+      console.error('[RecipesPage] 영상 요약 실패:', err?.message ?? err)
+      setVideoLoading({ active: false, title: '' })
+      setVideoError({ active: true, recipe })
     }
   }
 
