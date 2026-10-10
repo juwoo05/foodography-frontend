@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { MOCK_WEATHER, MOCK_SEASONAL_FOODS } from '../data/seasonalMock'
 
 // Base URL — set via .env: VITE_API_BASE=http://localhost:8080
 const BASE = import.meta.env.VITE_API_BASE ?? 'http://ridinggoat.kr'
@@ -454,4 +455,88 @@ export const MOCK_RECIPE_DETAIL = {
       timerSeconds: 600,
     },
   ],
+}
+
+// ── 제철 식재료 페이지 ─────────────────────────────────
+// true 로 바꾸면 백엔드 없이 mock 데이터로 동작 (오프라인 개발용)
+const USE_SEASONAL_MOCK = false
+const mockDelay = (data, ms = 600) => new Promise(r => setTimeout(() => r(data), ms))
+
+// 현재 기온·습도 (기상청 초단기실황)
+// 예정: GET /api/seasonal/weather?lat=&lon=  → 서버가 위경도→격자 변환 후 기상청 호출
+// 응답: { temperature, humidity, rn1, pty, windSpeed, locationName, baseDateTime }
+export async function fetchCurrentWeather(lat, lon) {
+  if (USE_SEASONAL_MOCK) return mockDelay(MOCK_WEATHER)
+  const res = await userApi.get('/api/seasonal/weather', { params: { lat, lon } })
+  return res.data
+}
+
+// 이달의 제철 식재료 (농사로 이달의 음식)
+// 예정: GET /api/seasonal/foods?year=&month=
+// 응답: List<{ cntntsNo, name, category, month, intro, buyTip, storage, prep, nutrition }>
+export async function fetchSeasonalFoods(year, month) {
+  if (USE_SEASONAL_MOCK) return mockDelay(MOCK_SEASONAL_FOODS[month] ?? [], 400)
+  const res = await userApi.get('/api/seasonal/foods', { params: { year, month } })
+  return Array.isArray(res.data) ? res.data : []
+}
+
+// ── 공지사항 ─────────────────────────────────────────
+// 인증 불필요 API 전용 인스턴스 — 쿠키를 보내지 않음
+// (만료된 AT 쿠키가 남아 있으면 공개 API 도 401 → userApi 인터셉터가 /login 으로 보내는 문제 방지)
+const publicApi = axios.create({ baseURL: BASE })
+
+// 공지 목록 — 고정 공지 우선 → 최신순
+// GET /api/notice/list?page=&size=&category=
+// 응답: { notices: [{ noticeId, category, title, pinnedYn, viewCnt, regDt }], page, size, totalPages, totalCount }
+export async function fetchNotices({ page = 0, size = 10, category } = {}) {
+  const params = { page, size }
+  if (category) params.category = category
+  const res = await publicApi.get('/api/notice/list', { params })
+  return res.data
+}
+
+// 공지 상세 — 조회수 +1, 이전·다음 글 포함 (없으면 404)
+// GET /api/notice/{noticeId}
+export async function fetchNotice(noticeId) {
+  const res = await publicApi.get(`/api/notice/${encodeURIComponent(noticeId)}`)
+  return res.data
+}
+
+// 공지 등록 — 관리자 전용 (JWT 쿠키 필요 → userApi)
+// POST /api/notice  바디: { category, title, content, pinnedYn }
+// 응답: { httpStatus, message, data: noticeId }
+export async function createNotice({ category, title, content, pinnedYn }) {
+  const res = await userApi.post('/api/notice', { category, title, content, pinnedYn })
+  return res.data
+}
+
+// 공지 수정 — 관리자 전용 (없거나 삭제된 공지면 404)
+// PUT /api/notice/{noticeId}  바디: { category, title, content, pinnedYn }
+export async function updateNotice(noticeId, { category, title, content, pinnedYn }) {
+  const res = await userApi.put(`/api/notice/${encodeURIComponent(noticeId)}`, { category, title, content, pinnedYn })
+  return res.data
+}
+
+// 공지 삭제 — 관리자 전용, 서버에서 숨김 처리 (VISIBLE_YN = N)
+// DELETE /api/notice/{noticeId}
+export async function deleteNotice(noticeId) {
+  const res = await userApi.delete(`/api/notice/${encodeURIComponent(noticeId)}`)
+  return res.data
+}
+
+// ── 냉장고 달력 ──────────────────────────────────────
+// 기간 내 스캔 확정 식료품 (FOOD_AFTER, 조회 전용) — start 포함 · end 제외, yyyy-MM-dd (최대 62일)
+// GET /api/fridge/calendar?start=&end=
+// 응답: List<{ scanId, scanDt, date, itemCount, items: [{ name, quantity, freshness, stockStatus, note, category }] }>
+export async function fetchFridgeCalendar({ start, end }) {
+  const res = await userApi.get('/api/fridge/calendar', { params: { start, end } })
+  return Array.isArray(res.data) ? res.data : []
+}
+
+// 연도별 특일 (공휴일·잡절·24절기·기념일 — 한국천문연구원) — 외부 API 실패 시 빈 목록
+// GET /api/fridge/special-days?year=
+// 응답: List<{ date, name, kind: HOLIDAY|SUNDRY|DIVISION|ANNIVERSARY, holiday }>
+export async function fetchSpecialDays(year) {
+  const res = await userApi.get('/api/fridge/special-days', { params: { year } })
+  return Array.isArray(res.data) ? res.data : []
 }

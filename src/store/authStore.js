@@ -1,8 +1,18 @@
 import { create } from 'zustand'
 import { loginUser, logoutUser, verifyToken } from '../utils/api'
 
+// verifyToken 응답 → user 객체 (roles: "ROLE_USER,ROLE_ADMIN" → 배열)
+const toUser = (data) => ({
+    userId:   data.userId,
+    userName: data.userName,
+    roles:    (data.roles ?? '').split(',').filter(Boolean),
+})
+
+// 관리자 여부 — UI 노출용 (실제 권한 검사는 서버 SecurityConfig 가 담당)
+export const isAdmin = (user) => !!user?.roles?.includes('ROLE_ADMIN')
+
 export const useAuthStore = create((set) => ({
-    // user: { userId: number, userName: string } | null
+    // user: { userId: number, userName: string, roles: string[] } | null
     user:       null,
     isLoading:  false,
     isChecking: true,   // 앱 최초 로드 시 세션 확인 중 → PrivateRoute 가 이 값으로 대기
@@ -14,9 +24,7 @@ export const useAuthStore = create((set) => ({
         try {
             const data = await verifyToken()
             set({
-                user: data.existYn === 'Y'
-                    ? { userId: data.userId, userName: data.userName }
-                    : null,
+                user: data.existYn === 'Y' ? toUser(data) : null,
                 isChecking: false,
             })
         } catch {
@@ -35,7 +43,7 @@ export const useAuthStore = create((set) => ({
                 // JWT 가 쿠키에 세팅됐으므로 즉시 verifyToken 으로 유저 정보 확정
                 const session = await verifyToken()
                 set({
-                    user: { userId: session.userId, userName: session.userName },
+                    user: toUser(session),
                     isLoading: false,
                 })
                 return { success: true }

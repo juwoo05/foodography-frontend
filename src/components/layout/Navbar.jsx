@@ -13,6 +13,8 @@ const SEARCH_INDEX = [
   { label: '레시피 추천',   path: '/recipes',  desc: '요리 추천 및 필터',       icon: '🍳' },
   { label: '쇼핑 가이드',   path: '/shopping', desc: '재료 가격 비교 구매',     icon: '🛒' },
   { label: '요리 가이드',   path: '/cooking',  desc: '단계별 조리 & 유튜브',    icon: '👨‍🍳' },
+  { label: '냉장고 달력',   path: '/fridge-calendar', desc: '날짜별 스캔 식료품 보기', icon: '📅' },
+  { label: '공지사항',      path: '/notice',   desc: '서비스 소식 및 업데이트', icon: '📢' },
   { label: '로그인',        path: '/login',    desc: '이메일로 로그인',         icon: '🔐' },
   { label: '회원가입',      path: '/signup',   desc: '무료 계정 만들기',        icon: '✨' },
   { label: '아이디 찾기',   path: '/find-id',  desc: '이메일 주소 확인',        icon: '📧' },
@@ -25,6 +27,8 @@ const PAGE_TITLES = {
   '/recipes':  '레시피 추천',
   '/shopping': '쇼핑 가이드',
   '/cooking':  '요리 가이드',
+  '/fridge-calendar': '냉장고 달력',
+  '/notice':   '공지사항',
   '/login':    '로그인',
   '/signup':   '회원가입',
   '/find-id':  '아이디 찾기',
@@ -47,7 +51,10 @@ export default function Navbar({ onMenuClick }) {
   const searchRef   = useRef(null)
   const inputRef    = useRef(null)
 
-  const pageTitle = PAGE_TITLES[location.pathname] ?? ''
+  // 상세 경로(/notice/12 등)는 첫 세그먼트로 제목 결정
+  const pageTitle = PAGE_TITLES[location.pathname]
+    ?? PAGE_TITLES[`/${location.pathname.split('/')[1]}`]
+    ?? ''
 
   // 검색 필터링
   useEffect(() => {

@@ -2,6 +2,7 @@ import React, { useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import PrivateRoute from './components/auth/PrivateRoute'
+import AdminRoute   from './components/auth/AdminRoute'
 import Layout from './components/layout/Layout'
 
 // ── 공개 페이지 ──────────────────────────────────────
@@ -10,6 +11,8 @@ import SignupPage from './pages/SignupPage'
 import FindIdPage from './pages/FindIdPage'
 import FindPwPage from './pages/FindPwPage'
 import HomePage   from './pages/HomePage'
+import NoticePage       from './pages/NoticePage'
+import NoticeDetailPage from './pages/NoticeDetailPage'
 
 // ── 인증 필요 페이지 ─────────────────────────────────
 import UploadPage   from './pages/UploadPage'
@@ -20,6 +23,11 @@ import CookingPage  from './pages/CookingPage'
 import FridgePage   from './pages/FridgePage'
 import ReviewPage   from './pages/ReviewPage'
 import MyPage       from './pages/MyPage'
+import SeasonalPage from './pages/SeasonalPage'
+import FridgeCalendarPage from './pages/FridgeCalendarPage'
+
+// ── 관리자 전용 페이지 ───────────────────────────────
+import NoticeWritePage from './pages/NoticeWritePage'
 
 export default function App() {
   const initAuth = useAuthStore(s => s.initAuth)
@@ -42,6 +50,14 @@ export default function App() {
           {/* 홈은 공개 (로그인 유도 랜딩 역할) */}
           <Route index element={<HomePage />} />
 
+          {/* 공지사항은 공개 (비로그인 열람 가능) */}
+          <Route path="notice"           element={<NoticePage />} />
+          <Route path="notice/:noticeId" element={<NoticeDetailPage />} />
+
+          {/* ── 관리자 전용 라우트 (비관리자는 공지 목록으로) ── */}
+          <Route path="notice/write"         element={<AdminRoute fallback="/notice"><NoticeWritePage /></AdminRoute>} />
+          <Route path="notice/:noticeId/edit" element={<AdminRoute fallback="/notice"><NoticeWritePage /></AdminRoute>} />
+
           {/* ── 인증 필요 라우트 (JWT 유효해야 진입 가능) ── */}
           <Route path="upload"   element={<PrivateRoute><UploadPage /></PrivateRoute>} />
           <Route path="analyze"  element={<PrivateRoute><AnalyzePage /></PrivateRoute>} />
@@ -51,6 +67,8 @@ export default function App() {
           <Route path="fridge"   element={<PrivateRoute><FridgePage /></PrivateRoute>} />
           <Route path="review"   element={<PrivateRoute><ReviewPage /></PrivateRoute>} />
           <Route path="mypage"   element={<PrivateRoute><MyPage /></PrivateRoute>} />
+          <Route path="seasonal" element={<PrivateRoute><SeasonalPage /></PrivateRoute>} />
+          <Route path="fridge-calendar" element={<PrivateRoute><FridgeCalendarPage /></PrivateRoute>} />
         </Route>
 
       </Routes>
