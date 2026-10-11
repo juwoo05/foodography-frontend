@@ -1,0 +1,127 @@
+/* AdBanner.module.css */
+
+/* 슬롯 — 크기는 AdBanner 가 CSS 변수로 전달 */
+.slot {
+  position: relative;
+  width: 100%;
+  max-width: var(--ad-w);
+  aspect-ratio: var(--ad-ar);
+  margin: 0 auto;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+}
+
+.adLabel {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  z-index: 1;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  background: rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+/* 이미지 왼쪽 위에 글자가 있는 배너용 */
+.adLabelRight { left: auto; right: 8px; }
+
+/* ── 빈 자리 ─────────────────────────────── */
+.placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 13px;
+  color: var(--text-dim);
+  border: 1px dashed rgba(255, 255, 255, 0.06);
+  border-radius: inherit;
+}
+.size {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+}
+
+/* ── 이미지 배너 ─────────────────────────── */
+.imageLink {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.imageLink picture { display: contents; }
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;      /* 비율이 다른 이미지는 가운데 기준으로 잘림 */
+  transition: filter 0.2s;
+}
+a.imageLink:hover .image { filter: brightness(1.08); }
+a.imageLink:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
+
+/* ── 자체 홍보 ───────────────────────────── */
+.promo {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 20px 12px 52px;
+  color: var(--text);
+  text-decoration: none;
+  background:
+    radial-gradient(circle at 0% 50%, var(--green-glow), transparent 55%),
+    linear-gradient(120deg, var(--bg-card2), var(--bg-card));
+  transition: background-color 0.2s;
+}
+.promo:hover .promoCta { gap: 8px; color: var(--green); }
+
+.promoEyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--green);
+}
+.promoTitle {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: pre-line;
+  word-break: keep-all;
+}
+.promoCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+  transition: gap 0.2s, color 0.2s;
+}
+
+/* 세로형(300×250) 은 가운데 정렬 */
+.slot[data-ad-slot$='side'] .promo {
+  align-items: center;
+  text-align: center;
+  padding: 28px 20px;
+  background:
+    radial-gradient(circle at 50% 0%, var(--green-glow), transparent 60%),
+    linear-gradient(170deg, var(--bg-card2), var(--bg-card));
+}
+.slot[data-ad-slot$='side'] .promoTitle { font-size: 18px; }
+
+@media (max-width: 900px) {
+  .slot {
+    max-width: var(--ad-mw);
+    aspect-ratio: var(--ad-mar);
+  }
+  .promo { padding-left: 20px; padding-top: 22px; }
+  .promoTitle { font-size: 14px; }
+}
