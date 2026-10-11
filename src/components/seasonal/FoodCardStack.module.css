@@ -1,0 +1,280 @@
+/* FoodCardStack.module.css */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+}
+
+/* ── 카드 무대 ─────────────────────────────── */
+.stage {
+  position: relative;
+  width: min(340px, 100%);
+  height: 460px;
+  margin-bottom: 32px;          /* 뒤 카드 y 오프셋 공간 */
+  perspective: 1400px;
+  outline: none;
+  border-radius: var(--radius);
+}
+.stage:focus-visible {
+  box-shadow: 0 0 0 3px var(--green-glow);
+}
+
+.card {
+  position: absolute;
+  inset: 0;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.cardBehind {
+  pointer-events: none;
+  filter: brightness(0.7);
+}
+
+.inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+
+.face {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+/* ── 앞면 ─────────────────────────────────── */
+.front {
+  --cat: var(--green);
+  --cat-bg: rgba(46, 204, 113, 0.16);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 26px 24px 20px;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 30%, var(--cat-bg), transparent 62%),
+    linear-gradient(170deg, var(--bg-card2), var(--bg-card));
+}
+.cat_fruit     { --cat: #FF6B6B; --cat-bg: rgba(255, 107, 107, 0.2); }
+.cat_vegetable { --cat: var(--green); --cat-bg: rgba(46, 204, 113, 0.18); }
+.cat_seafood   { --cat: #5DADE2; --cat-bg: rgba(93, 173, 226, 0.2); }
+.cat_grain     { --cat: var(--orange); --cat-bg: rgba(243, 156, 18, 0.2); }
+.cat_mushroom  { --cat: #C8A27A; --cat-bg: rgba(200, 162, 122, 0.2); }
+.cat_processed { --cat: #E59866; --cat-bg: rgba(229, 152, 102, 0.2); }
+
+.badge {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--green);
+  background: var(--green-glow);
+  border: 1px solid rgba(46, 204, 113, 0.25);
+}
+
+.illust {
+  margin: 22px 0 14px;
+  width: 150px;
+  height: 150px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--cat);
+  background: radial-gradient(circle, var(--cat-bg), transparent 70%);
+  border: 1px dashed color-mix(in srgb, var(--cat) 40%, transparent);
+  animation: float 4s ease-in-out infinite;
+}
+.photo {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  pointer-events: none;
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+
+.category {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--cat);
+}
+.name {
+  font-family: 'Jua', 'Noto Sans KR', sans-serif;
+  font-size: 38px;
+  font-weight: 400;
+  color: var(--text);
+  margin: 2px 0 10px;
+}
+.intro {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  word-break: keep-all;
+}
+.flipHint {
+  margin-top: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* ── 뒷면 ─────────────────────────────────── */
+.back {
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+  padding: 22px 20px;
+  text-align: left;
+  background: linear-gradient(170deg, var(--bg-card), var(--bg-card2));
+}
+.backTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Jua', 'Noto Sans KR', sans-serif;
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--text);
+  margin-bottom: 14px;
+}
+.backTitle svg { color: var(--green); }
+
+.sections {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 4px;
+}
+.section {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+}
+.section h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--green);
+  margin-bottom: 4px;
+}
+.section p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text);
+  word-break: keep-all;
+  white-space: pre-line;        /* 서버가 "· 항목\n· 항목" 형식으로 보냄 */
+}
+.sectionHighlight {
+  background: var(--orange-light);
+  border-color: rgba(243, 156, 18, 0.3);
+}
+.sectionHighlight h4 { color: var(--orange); }
+
+/* ── 컨트롤 ───────────────────────────────── */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.navBtn {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--text);
+  background: var(--bg-card2);
+  border: 1px solid var(--border);
+  transition: border-color 0.2s, color 0.2s, transform 0.15s;
+}
+.navBtn:hover { border-color: var(--green); color: var(--green); }
+.navBtn:active { transform: scale(0.92); }
+
+.dots {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  max-width: 220px;
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 99px;
+  background: var(--text-dim);
+  transition: width 0.25s, background 0.25s;
+}
+.dotActive {
+  width: 22px;
+  background: var(--green);
+}
+
+.counter {
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.counter strong { color: var(--green); }
+.helper {
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* ── 로딩·빈 상태 ─────────────────────────── */
+.skeleton {
+  width: min(340px, 100%);
+  height: 460px;
+  border-radius: var(--radius);
+}
+.empty {
+  width: min(340px, 100%);
+  height: 460px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: 1px dashed var(--border-hover);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: 14px;
+}
+.empty svg { color: var(--text-dim); }
+
+@media (max-width: 480px) {
+  .stage, .skeleton, .empty { height: 420px; }
+  .helper { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .illust { animation: none; }
+}
