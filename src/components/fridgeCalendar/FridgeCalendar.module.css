@@ -1,0 +1,185 @@
+/* FridgeCalendar.module.css — FullCalendar 다크 테마 */
+
+.wrap {
+  padding: 18px 18px 14px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+
+  /* FullCalendar 테마 변수 */
+  --fc-border-color: rgba(255, 255, 255, 0.07);
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: var(--bg-card2);
+  --fc-today-bg-color: rgba(46, 204, 113, 0.07);
+  --fc-event-bg-color: transparent;
+  --fc-event-border-color: transparent;
+  --fc-event-text-color: var(--text);
+  --fc-button-text-color: var(--text);
+  --fc-button-bg-color: var(--bg-card2);
+  --fc-button-border-color: var(--border);
+  --fc-button-hover-bg-color: var(--bg-card2);
+  --fc-button-hover-border-color: var(--border-hover);
+  --fc-button-active-bg-color: var(--green);
+  --fc-button-active-border-color: var(--green);
+}
+
+/* ── 툴바 ────────────────────────────────── */
+.wrap :global(.fc .fc-toolbar.fc-header-toolbar) { margin-bottom: 14px; }
+.wrap :global(.fc .fc-toolbar-title) {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.wrap :global(.fc .fc-button) {
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: none !important;
+  transition: border-color 0.2s, color 0.2s;
+}
+.wrap :global(.fc .fc-button:hover:not(:disabled)) { color: var(--green); }
+.wrap :global(.fc .fc-button:disabled) { opacity: 0.4; }
+.wrap :global(.fc .fc-button-group > .fc-button) { padding: 6px 9px; }
+.wrap :global(.fc .fc-today-button) { margin-right: 8px; }
+
+/* ── 요일·날짜 ───────────────────────────── */
+.wrap :global(.fc .fc-scrollgrid) { border-radius: var(--radius-sm); overflow: hidden; }
+.wrap :global(.fc .fc-col-header-cell) { background: var(--bg-card2); }
+.wrap :global(.fc .fc-col-header-cell-cushion) {
+  padding: 8px 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+.wrap :global(.fc .fc-day-sun .fc-col-header-cell-cushion),
+.wrap :global(.fc .fc-day-sun .fc-daygrid-day-number) { color: #E8808A; }
+.wrap :global(.fc .fc-day-sat .fc-col-header-cell-cushion),
+.wrap :global(.fc .fc-day-sat .fc-daygrid-day-number) { color: #7FB8E6; }
+
+.wrap :global(.fc .fc-daygrid-day) { cursor: pointer; transition: background 0.15s; }
+.wrap :global(.fc .fc-daygrid-day:hover) { background: rgba(46, 204, 113, 0.04); }
+.wrap :global(.fc .fc-daygrid-day-frame) { min-height: 84px; }
+.wrap :global(.fc .fc-daygrid-day-number) {
+  padding: 6px 8px;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+.wrap :global(.fc .fc-daygrid-day-top) { min-width: 0; }
+.wrap :global(.fc .fc-daygrid-day-number) {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 100%;
+}
+.dayNum { flex-shrink: 0; }
+.wrap :global(.fc .fc-day-today) .dayNum {
+  margin: -2px -4px 0 0;
+  padding: 2px 7px;
+  border-radius: 99px;
+  font-weight: 700;
+  color: #0D0F0E;
+  background: var(--green);
+}
+
+/* 공휴일 — 빨간 날짜 */
+.wrap :global(.fc) .holiday :global(.fc-daygrid-day-number) { color: #FF6B6B; }
+
+/* 특일 라벨 (공휴일·잡절·절기) */
+.dayLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+}
+.wrap :global(.fc .fc-day-other .fc-daygrid-day-top),
+.wrap :global(.fc .fc-day-other .fc-daygrid-event-harness) { opacity: 0.35; }
+
+/* 선택한 날짜 — dayCellClassNames 로 부여 */
+.wrap :global(.fc) .selected {
+  background: rgba(46, 204, 113, 0.1);
+  box-shadow: inset 0 0 0 2px var(--green);
+}
+
+/* ── 이벤트 (날짜 칸 안 요약 칩) ────────── */
+.wrap :global(.fc .fc-daygrid-event) {
+  margin: 2px 4px 0;
+  border-radius: 8px;
+  white-space: normal;
+  cursor: pointer;
+}
+.wrap :global(.fc .fc-event:focus-visible) { outline: 2px solid var(--green); }
+.wrap :global(.fc .fc-event-main) { width: 100%; }
+
+.event {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: var(--bg-card2);
+  border: 1px solid var(--border);
+  transition: border-color 0.15s;
+}
+.event:hover { border-color: var(--border-hover); }
+
+.icons { display: inline-flex; align-items: center; gap: 2px; }
+.icon {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+.extra {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.count {
+  margin-left: auto;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+.count small { margin-left: 1px; font-family: 'Noto Sans KR', sans-serif; font-size: 10px; font-weight: 400; color: var(--text-muted); }
+.scanBadge {
+  position: absolute;
+  top: -7px;
+  right: -4px;
+  padding: 0 5px;
+  border-radius: 99px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 15px;
+  color: #0D0F0E;
+  background: var(--orange);
+}
+
+/* ── 모바일 ──────────────────────────────── */
+@media (max-width: 640px) {
+  .wrap { padding: 12px 8px 10px; }
+  .wrap :global(.fc .fc-toolbar-title) { font-size: 1.05rem; }
+  .wrap :global(.fc .fc-button) { padding: 5px 8px; font-size: 12px; }
+  .wrap :global(.fc .fc-daygrid-day-frame) { min-height: 64px; }
+  .wrap :global(.fc .fc-daygrid-event) { margin: 2px 2px 0; }
+  .event { justify-content: center; padding: 3px; gap: 2px; }
+  .icons .icon:nth-child(n + 2), .extra { display: none; }   /* 좁은 칸: 대표 아이콘 1개 + 개수 */
+  .count { margin-left: 0; font-size: 11px; }
+  .count small { display: none; }
+  .scanBadge { display: none; }
+  .wrap :global(.fc .fc-daygrid-day-number) { padding: 4px; gap: 2px; }
+  .dayLabel { max-width: 4em; font-size: 10px; }
+}

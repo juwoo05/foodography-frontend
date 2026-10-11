@@ -1,0 +1,171 @@
+/* ScanDetailPanel.module.css */
+
+.panel {
+  padding: 18px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.date {
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.headMeta {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* 이 날의 특일 */
+.specialDays {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: -4px 0 14px;
+}
+
+/* ── 스캔 카드 ───────────────────────────── */
+.scanList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card2);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.time,
+.itemCount {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+}
+.time { font-weight: 700; color: var(--green); }
+.time, .itemCount { font-family: 'Space Mono', 'Noto Sans KR', monospace; }
+.itemCount { font-size: 12px; color: var(--text-muted); }
+
+/* ── 분류 묶음 ───────────────────────────── */
+.group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.items {
+  list-style: none;
+  width: 100%;
+}
+.item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 6px 2px 6px 4px;
+}
+.item + .item { border-top: 1px dashed rgba(255, 255, 255, 0.06); }
+.itemName {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  word-break: keep-all;
+}
+.qty {
+  margin-left: 6px;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.note {
+  flex-basis: 100%;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* ── 양념·부재료 (접힘) ──────────────────── */
+.seasoning summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+}
+.seasoning summary::-webkit-details-marker { display: none; }
+.summaryHint { font-size: 11px; color: var(--text-dim); }
+.seasoning[open] .summaryHint { display: none; }
+.seasoningNames {
+  margin-top: 8px;
+  padding-left: 4px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-muted);
+  word-break: keep-all;
+}
+
+/* ── 상태 ────────────────────────────────── */
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 36px 12px;
+  font-size: 14px;
+  color: var(--text-muted);
+  text-align: center;
+}
+.state svg { color: var(--text-dim); }
+.scanLink,
+.retryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text);
+  text-decoration: none;
+  background: var(--bg-card2);
+  border: 1px solid var(--border);
+  transition: border-color 0.2s, color 0.2s;
+}
+.scanLink svg { color: inherit; }
+.scanLink:hover,
+.retryBtn:hover { border-color: var(--green); color: var(--green); }
+
+.skeleton { display: flex; flex-direction: column; gap: 10px; }
+.skeleton span {
+  height: 72px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--bg-card2) 0%, rgba(255, 255, 255, 0.06) 50%, var(--bg-card2) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton span { animation: none; }
+}

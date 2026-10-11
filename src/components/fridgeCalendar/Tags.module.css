@@ -1,0 +1,45 @@
+/* Tags.module.css — 분류·신선도 태그 */
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 8px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.tag svg { flex-shrink: 0; }
+
+/* 분류 — 색은 --tag-c 로 전달 */
+.category {
+  color: var(--tag-c);
+  background: color-mix(in srgb, var(--tag-c) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tag-c) 28%, transparent);
+}
+.sm { padding: 1px 8px 1px 6px; font-size: 11px; gap: 4px; }
+.count {
+  margin-left: 2px;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* 신선도 */
+.freshness { padding: 2px 8px 2px 6px; font-size: 11px; }
+.fresh_good    { color: var(--green);      background: var(--green-glow); }
+.fresh_normal  { color: var(--orange);     background: var(--orange-light); }
+.fresh_bad     { color: var(--red);        background: rgba(231, 76, 60, 0.15); }
+.fresh_unknown { color: var(--text-muted); background: rgba(255, 255, 255, 0.05); }
+
+/* 특일 — 공휴일 아닌 분류인데 쉬는 날일 때 */
+.offDay {
+  margin-left: 2px;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-size: 10px;
+  color: #0D0F0E;
+  background: var(--tag-c);
+}
